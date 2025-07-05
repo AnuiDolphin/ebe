@@ -4,169 +4,187 @@ import (
 	"bytes"
 	"ebe/serialize"
 	"ebe/types"
+	"ebe/utils"
 	"fmt"
 	"math"
 )
 
 func main() {
-	TestUint(0)
-	TestUint(1)
-	TestUint(0xff)
-	TestUint(0xffff)
-	TestUint(0xffffff)
-	TestUint(0xffffffff)
-	TestUint(0xffffffffff)
-	TestUint(0xffffffffffff)
-	TestUint(0xffffffffffffff)
-	TestUint(0xffffffffffffffff)
 
-	TestUint(0xff + 1)
-	TestUint(0xffff + 1)
-	TestUint(0xffffff + 1)
-	TestUint(0xffffffff + 1)
-	TestUint(0xffffffffff + 1)
-	TestUint(0xffffffffffff + 1)
+	// Test multiple serialization
+	fmt.Println("\n--- Testing Multiple serialization ---")
+	TestMultipleDeserialize()
 
-	TestSint(-0x7f)
-	TestSint(-0x7fff)
-	TestSint(-0x7fffff)
-	TestSint(-0x7fffffff)
-	TestSint(-0x7fffffffff)
-	TestSint(-0x7fffffffffff)
-	TestSint(-0x7fffffffffffff)
-	TestSint(-0x7fffffffffffffff)
+	// Test different integer types (Go will infer appropriate types)
+	TestValue(uint8(0), types.SNibble)
+	TestValue(uint8(1), types.UNibble)
+	TestValue(uint8(0xff), types.UInt)
+	TestValue(uint16(0xffff), types.UInt)
+	TestValue(uint32(0xffffffff), types.UInt)
+	TestValue(uint64(0xffffffffffffffff), types.UInt) // Must cast to uint64 - too large for signed int
 
-	TestSint(-0xff)
-	TestSint(-0xffff)
-	TestSint(-0xffffff)
-	TestSint(-0xffffffff)
-	TestSint(-0xffffffffff)
-	TestSint(-0xffffffffffff)
-	TestSint(-0xffffffffffffff)
-	TestSint(-0x7fffffffffffffff)
+	// Test some boundary values
+	TestValue(uint8(0xff), types.UInt)
+	TestValue(uint16(0xff+1), types.UInt)
+	TestValue(uint16(0xffff), types.UInt)
+	TestValue(uint32(0xffff+1), types.UInt)
+	TestValue(uint32(0xffffffff), types.UInt)
+	TestValue(uint64(0xffffffff+1), types.UInt)
 
-	TestString("")
-	TestString("A")
-	TestString("AB")
-	TestString("Hello")
-	TestString("The quick brown fox jumped over the lazy dog")
-	TestString("🙂")
+	// Test different signed integer values
+	TestValue(-1, types.SNibble)
+	TestValue(-7, types.SNibble)
+	TestValue(-0x7f, types.SInt)
+	TestValue(-127, types.SInt)
+	TestValue(-0x7fff, types.SInt)
+	TestValue(-32767, types.SInt)
+	TestValue(-0x7fffffff, types.SInt)
+	TestValue(-2147483647, types.SInt)
+	TestValue(-0x7fffffffffffffff, types.SInt)
+	TestValue(-9223372036854775807, types.SInt)
 
-	TestBuffer([]byte{})
-	TestBuffer([]byte{1})
-	TestBuffer([]byte{1, 2, 3})
-	TestBuffer([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17})
+	// Test some additional signed values
+	TestValue(-128, types.SInt)        // min int8 range
+	TestValue(-32768, types.SInt)      // min int16 range
+	TestValue(-2147483648, types.SInt) // min int32 range
+	TestValue(-0x7fffffffffffffff, types.SInt)
 
-	TestBoolean(true)
-	TestBoolean(false)
+	// Test strings
+	TestValue("", types.String)
+	TestValue("A", types.String)
+	TestValue("AB", types.String)
+	TestValue("Hello", types.String)
+	TestValue("The quick brown fox jumped over the lazy dog", types.String)
+	TestValue("🙂", types.String)
 
-	TestFloat(0)
-	TestFloat(0.1)
-	TestFloat(-1.1)
-	TestFloat(1.17549435e-38) // Min float32
-	TestFloat(1.17549435e-39)
-	TestFloat(math.MaxFloat32)
-	TestFloat(math.MaxFloat64)
+	// Test buffers
+	TestValue([]byte{}, types.Buffer)
+	TestValue([]byte{1}, types.Buffer)
+	TestValue([]byte{1, 2, 3}, types.Buffer)
+	TestValue([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}, types.Buffer)
+
+	// Test booleans
+	TestValue(true, types.Boolean)
+	TestValue(false, types.Boolean)
+
+	// Test floats
+	TestValue(0.0, types.Float)
+	TestValue(0.1, types.Float)
+	TestValue(-1.1, types.Float)
+	TestValue(float32(1.17549435e-38), types.Float) // Min float32
+	TestValue(1.17549435e-39, types.Float)
+	TestValue(float32(math.MaxFloat32), types.Float)
+	TestValue(math.MaxFloat64, types.Float)
 }
 
-func TestUint(value uint64) {
+func TestValue(value interface{}, expectedType types.Types) {
 	var data bytes.Buffer
 
-	serialize.SerializeUint(value, &data)
-	fmt.Print("value = ", value, ", ")
-	types.PrintHeader(data.Bytes())
-
-	var readValue, _ = serialize.DeserializeUint(data.Bytes())
-	fmt.Print(", Read:", readValue)
-
-	if readValue == value {
-		fmt.Println(", Pass")
-	} else {
-		fmt.Println(", *** FAIL ***")
+	// Use generic serialize to handle all types
+	err := serialize.Serialize(value, &data)
+	if err != nil {
+		fmt.Printf("Error serializing %T: %v\n", value, err)
+		return
 	}
-}
 
-func TestSint(value int64) {
-	var data bytes.Buffer
-
-	serialize.SerializeSint(value, &data)
-	fmt.Print("value = ", value, ", ")
-	types.PrintHeader(data.Bytes())
-
-	var readValue, _ = serialize.DeserializeSint(data.Bytes())
-	fmt.Print(", Read:", readValue)
-
-	if readValue == value {
-		fmt.Println(", Pass")
-	} else {
-		fmt.Println(", *** FAIL ***")
+	// Get the actual type from the serialized data
+	if len(data.Bytes()) == 0 {
+		fmt.Printf("Error: no data serialized for %T\n", value)
+		return
 	}
-}
 
-func TestString(value string) {
-	var data bytes.Buffer
+	header := data.Bytes()[0]
+	actualType := types.TypeFromHeader(header)
 
-	serialize.SerializeString(value, &data)
-	fmt.Print("value = '", value, "', ")
-	types.PrintHeader(data.Bytes())
-
-	var readValue, _ = serialize.DeserializeString(data.Bytes())
-	fmt.Print(", Read:'", readValue, "'")
-
-	if readValue == value {
-		fmt.Println(", Pass")
-	} else {
-		fmt.Println(", *** FAIL ***")
+	// Format output based on type
+	switch v := value.(type) {
+	case string, []byte, bool:
+		fmt.Print("value = '", v, "', ")
+	default:
+		fmt.Print("value = ", v, ", ")
 	}
-}
 
-func TestBuffer(value []byte) {
-	var data bytes.Buffer
+	fmt.Print(types.HeaderString(data.Bytes()))
 
-	serialize.SerializeBuffer(value, &data)
-	fmt.Print("value: '", value, "', ")
-	types.PrintHeader(data.Bytes())
-
-	var readValue, _ = serialize.DeserializeBuffer(data.Bytes())
-	fmt.Print(", Read:", readValue.Bytes())
-
-	if bytes.Equal(readValue.Bytes(), value) {
-		fmt.Println(", Pass")
-	} else {
-		fmt.Println(", *** FAIL ***")
+	// Validate the type matches expected
+	if actualType != expectedType {
+		fmt.Printf(", Error: expected type: %s, got: %s\n", types.TypeName(expectedType), types.TypeName(actualType))
+		return
 	}
-}
 
-func TestBoolean(value bool) {
-	var data bytes.Buffer
-
-	serialize.SerializeBoolean(value, &data)
-	fmt.Print("value: '", value, "', ")
-	types.PrintHeader(data.Bytes())
-
-	var readValue, _ = serialize.DeserializeBoolean(data.Bytes())
-	fmt.Print(", Read:", readValue)
-
-	if value == readValue {
-		fmt.Println(", Pass")
-	} else {
-		fmt.Println(", *** FAIL ***")
+	// Use generic deserialize
+	readValue, _, err := serialize.Deserialize(data.Bytes())
+	if err != nil {
+		fmt.Printf(", Error: %v\n", err)
+		return
 	}
+
+	// Format read output based on original type
+	switch value.(type) {
+	case string:
+		fmt.Print(", Read:'", readValue, "'")
+	case []byte:
+		if buffer, ok := readValue.(*bytes.Buffer); ok {
+			fmt.Print(", Read:", buffer.Bytes())
+		} else {
+			fmt.Print(", Read:", readValue)
+		}
+	default:
+		fmt.Print(", Read:", readValue)
+	}
+
+	// Check if values are equivalent (handles type conversions)
+	var isEqual bool
+	switch originalValue := value.(type) {
+	case []byte:
+		if buffer, ok := readValue.(*bytes.Buffer); ok {
+			isEqual = bytes.Equal(originalValue, buffer.Bytes())
+		}
+	default:
+		isEqual = utils.CompareValue(value, readValue)
+	}
+
+	if !isEqual {
+		fmt.Printf(", Error: values not equal: %v != %v\n", value, readValue)
+		return
+	}
+
+	fmt.Println(", Pass")
 }
 
-func TestFloat(value float64) {
+func TestMultipleDeserialize() {
 	var data bytes.Buffer
 
-	serialize.SerializeFloat(value, &data)
-	fmt.Print("value = ", value, ", ")
-	types.PrintHeader(data.Bytes())
+	// Serialize multiple values into buffer
+	serialize.Serialize(uint64(0xffffffffffffffff), &data)
+	serialize.Serialize("The quick brown fox jumps over the lazy dog", &data)
+	serialize.Serialize(-0x7fffffffffffffff, &data)
+	serialize.Serialize("Hello, World!", &data)
+	serialize.Serialize(true, &data)
+	serialize.Serialize(3.141592653589793, &data)
 
-	var readValue, _ = serialize.DeserializeFloat(data.Bytes())
-	fmt.Print(", Read:", readValue)
+	// Test DeserializeAll
+	values, err := serialize.DeserializeAll(data.Bytes())
+	if err != nil {
+		fmt.Println("Error deserializing all:", err)
+		return
+	}
 
-	if readValue == value {
-		fmt.Println(", Pass")
-	} else {
-		fmt.Println(", *** FAIL ***")
+	// Verify the values
+	expectedValues := []interface{}{
+		uint64(0xffffffffffffffff),
+		"The quick brown fox jumps over the lazy dog",
+		int64(-0x7fffffffffffffff),
+		"Hello, World!",
+		true,
+		3.141592653589793,
+	}
+
+	for i, expected := range expectedValues {
+		if i < len(values) && values[i] == expected {
+			fmt.Printf("  [%d] Pass: %T, %v\n", i, values[i], values[i])
+		} else {
+			fmt.Printf("  [%d] *** FAIL *** (expected %v, got %v)\n", i, expected, values[i])
+		}
 	}
 }

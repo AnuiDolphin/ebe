@@ -2,6 +2,7 @@
 
 # Ignore the main test executable
 ebeTest
+ebe
 
 # Ignore vscode files
 .vscode/

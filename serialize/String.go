@@ -3,10 +3,12 @@ package serialize
 import (
 	"bytes"
 	"ebe/types"
+	"fmt"
 )
 
 func SerializeString(value string, data *bytes.Buffer) {
 
+	// This function appends the serialized string to the existing buffer
 	// Write the length of the string as an [UInt]
 	var length = len(value)
 
@@ -18,17 +20,17 @@ func SerializeString(value string, data *bytes.Buffer) {
 		data.WriteByte(types.CreateHeader(types.String, byte(length)))
 	} else {
 		data.WriteByte(types.CreateHeader(types.String, 0x08))
-		SerializeUint(uint64(length), data)
+		SerializeUint64(uint64(length), data)
 	}
 
 	// Write the raw string data
 	data.WriteString(value)
 }
 
-func DeserializeString(data []byte) (string, []byte) {
+func DeserializeString(data []byte) (string, []byte, error) {
 
 	if len(data) == 0 {
-		return "", data
+		return "", data, fmt.Errorf("no data to deserialize")
 	}
 
 	var header = data[0]
@@ -37,19 +39,27 @@ func DeserializeString(data []byte) (string, []byte) {
 	var headerType = types.TypeFromHeader(header)
 
 	if headerType != types.String {
-		return "", data
+		return "", data, fmt.Errorf("expected String type, got %v", types.TypeName(headerType))
 	}
 
 	var length = uint64(types.ValueFromHeader(header))
 
 	// If the 4th bit of the nibble is not set then this is a special cased string whose length fits in the length nibble
 	// Otherwise get the string length from integer in the next data type
-	if length == 8 {
-		length, data = DeserializeUint(data[0:])
+	var err error = nil
+	if length & 0x08 != 0 {
+		length, data, err = DeserializeUint64(data)
+		if err != nil {
+			return "", data, fmt.Errorf("failed to deserialize string length: %w", err)
+		}
+	}
+
+	if uint64(len(data)) < length {
+		return "", data, fmt.Errorf("insufficient data: need %d bytes, have %d", length, len(data))
 	}
 
 	var value = string(data[0:length])
 	data = data[length:]
 
-	return value, data
+	return value, data, err
 }

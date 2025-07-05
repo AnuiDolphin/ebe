@@ -3,22 +3,23 @@ package serialize
 import (
 	"bytes"
 	"ebe/types"
+	"fmt"
 )
 
 func SerializeBoolean(value bool, data *bytes.Buffer) {
-
+	// This function appends the serialized boolean to the existing buffer
 	// Set the header for the type and put the boolean value in the value nibble
 	if value {
-		data.WriteByte(types.CreateHeader(types.Boolean, 1))
+		data.WriteByte(types.CreateHeader(types.Boolean, 1)) // append to buffer
 	} else {
-		data.WriteByte(types.CreateHeader(types.Boolean, 0))
+		data.WriteByte(types.CreateHeader(types.Boolean, 0)) // append to buffer
 	}
 }
 
-func DeserializeBoolean(data []byte) (bool, []byte) {
+func DeserializeBoolean(data []byte) (bool, []byte, error) {
 
 	if len(data) == 0 {
-		return false, data
+		return false, data, fmt.Errorf("no data to deserialize")
 	}
 
 	var header = data[0]
@@ -27,9 +28,9 @@ func DeserializeBoolean(data []byte) (bool, []byte) {
 	var headerType = types.TypeFromHeader(header)
 
 	if headerType != types.Boolean {
-		return false, data
+		return false, data, fmt.Errorf("expected Boolean type, got %v", headerType)
 	}
 
 	var value = types.ValueFromHeader(header)
-	return value != 0, data
+	return value != 0, data, nil
 }

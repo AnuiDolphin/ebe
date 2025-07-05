@@ -26,10 +26,10 @@ func CreateHeader(typev Types, value byte) byte {
 	return header
 }
 
-func PrintHeader(data []byte) {
+func HeaderString(data []byte) string {
 	var header = data[0]
 	var typeName = TypeNameFromHeader(header)
 	var value = ValueFromHeader(header)
 
-	fmt.Print("{", typeName, ":", value, "}", data[1:])
+	return fmt.Sprintf("{%s:%d}%v", typeName, value, data[1:])
 }

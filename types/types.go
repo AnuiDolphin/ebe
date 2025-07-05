@@ -3,31 +3,33 @@ package types
 type Types uint8
 
 const (
-	UIntNibble Types = 0
-	SInt       Types = 1
-	UInt       Types = 2
-	Float      Types = 3
-	Complex    Types = 4
-	Boolean    Types = 5
-	String     Types = 6
-	Buffer     Types = 7
-	Array      Types = 8
-	Pointer    Types = 9
-	Slice      Types = 10
+	UNibble Types = 0
+	SNibble Types = 1
+	SInt    Types = 2
+	UInt    Types = 3
+	Float   Types = 4
+	Complex Types = 5
+	Boolean Types = 6
+	String  Types = 7
+	Buffer  Types = 8
+	Array   Types = 9
+	Pointer Types = 10
+	Slice   Types = 11
 )
 
 var TypeNames = map[Types]string{
-	UIntNibble: "Nibble",
-	SInt:       "SInt",
-	UInt:       "UInt",
-	Float:      "Float",
-	Complex:    "Complex",
-	Boolean:    "Boolean",
-	Pointer:    "Pointer",
-	Slice:      "Slice",
-	String:     "String",
-	Buffer:     "Buffer",
-	Array:      "Array",
+	UNibble: "UNibble",
+	SNibble: "SNibble",
+	SInt:    "SInt",
+	UInt:    "UInt",
+	Float:   "Float",
+	Complex: "Complex",
+	Boolean: "Boolean",
+	Pointer: "Pointer",
+	Slice:   "Slice",
+	String:  "String",
+	Buffer:  "Buffer",
+	Array:   "Array",
 }
 
 func TypeName(typeValue Types) string {

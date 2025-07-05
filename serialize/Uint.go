@@ -3,20 +3,144 @@ package serialize
 import (
 	"bytes"
 	"ebe/types"
+	"fmt"
 	"math"
 )
 
-func SerializeUint(value uint64, data *bytes.Buffer) {
+func DeserializeUNibble(data []byte) (uint8, []byte, error) {
+
+	if len(data) == 0 {
+		return 0, data, fmt.Errorf("no data to deserialize")
+	}
+
+	var header = data[0]
+	var headerType = types.TypeFromHeader(header)
+	var length = types.ValueFromHeader(header)
+	data = data[1:]
+
+	// If the header is a UNibble, we can return the value directly
+	if headerType != types.UNibble {
+		return 0, data, fmt.Errorf("expected UNibble type, got %v", types.TypeNameFromHeader(header))
+	}
+
+	// For UNibble, the value is stored directly in the header (no negative values)
+	return uint8(length), data, nil
+}
+
+func DeserializeUint8(data []byte) (uint8, []byte, error) {
+	value, remainingData, err := DeserializeUint64(data)
+	if err != nil {
+		return 0, remainingData, err
+	}
+	if value > math.MaxUint8 {
+		return 0, remainingData, fmt.Errorf("value %d does not fit in uint8 range [0, %d]", value, math.MaxUint8)
+	}
+	return uint8(value), remainingData, nil
+}
+
+func DeserializeUint16(data []byte) (uint16, []byte, error) {
+	value, remainingData, err := DeserializeUint64(data)
+	if err != nil {
+		return 0, remainingData, err
+	}
+	if value > math.MaxUint16 {
+		return 0, remainingData, fmt.Errorf("value %d does not fit in uint16 range [0, %d]", value, math.MaxUint16)
+	}
+	return uint16(value), remainingData, nil
+}
+
+func DeserializeUint32(data []byte) (uint32, []byte, error) {
+	value, remainingData, err := DeserializeUint64(data)
+	if err != nil {
+		return 0, remainingData, err
+	}
+	if value > math.MaxUint32 {
+		return 0, remainingData, fmt.Errorf("value %d does not fit in uint32 range [0, %d]", value, math.MaxUint32)
+	}
+	return uint32(value), remainingData, nil
+}
+
+func DeserializeUint64(data []byte) (uint64, []byte, error) {
+
+	if len(data) == 0 {
+		return 0, data, fmt.Errorf("no data to deserialize")
+	}
+
+	var header = data[0]
+	var headerType = types.TypeFromHeader(header)
+	var length = types.ValueFromHeader(header)
+	data = data[1:]
+
+	if len(data) == 0 {
+		return 0, data, fmt.Errorf("no data to deserialize")
+	}
+
+	// For UNibble, the value is stored directly in the header (no negative values)
+	if headerType == types.UNibble {
+		return uint64(length), data, nil
+	}
+
+	// Make sure the data is a valid integer value
+	if headerType != types.UInt {
+		return 0, data, fmt.Errorf("expected UInt type, got %v", headerType)
+	}
+
+	if len(data) < int(length) {
+		return 0, data, fmt.Errorf("insufficient data: need %d bytes, got %d", length, len(data))
+	}
+
+	var value uint64 = 0
+	for i := 0; i < int(length); i++ {
+		var dataByte = data[i]
+		value = value << 8
+		value = value | uint64(dataByte)
+	}
+	data = data[length:]
+
+	return value, data, nil
+}
+
+func DeserializeUint(data []byte) (uint64, []byte, error) {
+	return DeserializeUint64(data)
+}
+
+//
+// Serialization functions
+// These functions serialize unsigned integers into a byte buffer.
+// All methods append to the existing buffer without clearing it.
+//
+
+func SerializeUint8(value uint8, data *bytes.Buffer) {
+	// Append uint8 as uint64 to the buffer
+	SerializeUint64(uint64(value), data)
+}
+
+func SerializeUint16(value uint16, data *bytes.Buffer) {
+	// Append uint16 as uint64 to the buffer
+	SerializeUint64(uint64(value), data)
+}
+
+func SerializeUint32(value uint32, data *bytes.Buffer) {
+	// Append uint32 as uint64 to the buffer
+	SerializeUint64(uint64(value), data)
+}
+
+func SerializeUint64(value uint64, data *bytes.Buffer) {
+	// This function appends the serialized unsigned integer to the existing buffer
 
 	// Figure out what size of integer is needed for the data
 	var length uint8 = 0
 	switch {
 
-	// Special case integer values less than 15
+	// Special case integer values less than or equal to 15
 	// Instead of using additional bytes for the value,
 	// put the value in the lsb nibble of the header
 	case value <= 0x0f:
-		data.WriteByte(types.CreateHeader(types.UIntNibble, byte(value)))
+		if value == 0x00 {
+			data.WriteByte(types.CreateHeader(types.SNibble, byte(value)))
+		} else {
+			data.WriteByte(types.CreateHeader(types.UNibble, byte(value)))
+		}
 		return
 
 	case value <= math.MaxUint8:
@@ -44,53 +168,14 @@ func SerializeUint(value uint64, data *bytes.Buffer) {
 		length = 8
 	}
 
-	// Set the header for the type in the data buffer
+	// Set the header for the type in the data buffer (appends to buffer)
 	data.WriteByte(types.CreateHeader(types.UInt, length))
 
-	// Move the data into the data buffer
+	// Move the data into the data buffer (appends bytes to buffer)
 	for i := uint8(length - 1); ; i-- {
-		var mask uint64 = 0xff << (i * 8)            // Create the mask to clear all bits other than they byte at position i
-		var maskedValue = value & mask               // Clear all bits other than the byte at position i
-		var byteValue = byte(maskedValue >> (i * 8)) // Get the byte at position i
-
-		data.WriteByte(byteValue)
-
+		data.WriteByte(byte(value >> (i * 8))) // append byte to buffer
 		if i == 0 {
 			break
 		}
 	}
-}
-
-func DeserializeUint(data []byte) (uint64, []byte) {
-
-	if len(data) == 0 {
-		return 0, data
-	}
-
-	var header = data[0]
-	data = data[1:]
-
-	var headerType = types.TypeFromHeader(header)
-	var length = types.ValueFromHeader(header)
-
-	// Values that fit into the length nibble of the header are special
-	// cased by storing the length in the header itself
-	if headerType == types.UIntNibble {
-		return uint64(length), data
-	}
-
-	// Make sure the data is a valid integer value
-	if headerType != types.UInt {
-		return 0, data
-	}
-
-	var value uint64 = 0
-	for i := 0; i < int(length); i++ {
-		var dataByte = data[i]
-		value = value << 8
-		value = value | uint64(dataByte)
-	}
-	data = data[length:]
-
-	return value, data
 }

@@ -4,9 +4,150 @@ import (
 	"bytes"
 	"ebe/types"
 	"ebe/utils"
+	"fmt"
+	"math"
 )
 
-func SerializeSint(value int64, data *bytes.Buffer) {
+func DeserializeSNibble(data []byte) (int8, []byte, error) {
+
+	if len(data) == 0 {
+		return 0, data, fmt.Errorf("no data to deserialize")
+	}
+
+	var header = data[0]
+	var headerType = types.TypeFromHeader(header)
+	var nibbleValue = types.ValueFromHeader(header)
+	data = data[1:]
+
+	// If the header is a SNibble, we can return the value directly
+	if headerType != types.SNibble {
+		return 0, data, fmt.Errorf("expected SNibble type, got %v", headerType)
+	}
+
+	// For SNibble: bit 3 is sign, bits 0-2 are magnitude
+	var negative = (nibbleValue & 0x8) != 0
+	var magnitude = nibbleValue & 0x7 // Get bits 0-2
+
+	if negative {
+		return -int8(magnitude), data, nil
+	} else {
+		return int8(magnitude), data, nil
+	}
+}
+
+func DeserializeSint8(data []byte) (int8, []byte, error) {
+	value, remainingData, err := DeserializeSint64(data)
+	if err != nil {
+		return 0, remainingData, err
+	}
+	if value < math.MinInt8 || value > math.MaxInt8 {
+		return 0, remainingData, fmt.Errorf("value %d does not fit in int8 range [%d, %d]", value, math.MinInt8, math.MaxInt8)
+	}
+	return int8(value), remainingData, nil
+}
+
+func DeserializeSint16(data []byte) (int16, []byte, error) {
+	value, remainingData, err := DeserializeSint64(data)
+	if err != nil {
+		return 0, remainingData, err
+	}
+	if value < math.MinInt16 || value > math.MaxInt16 {
+		return 0, remainingData, fmt.Errorf("value %d does not fit in int16 range [%d, %d]", value, math.MinInt16, math.MaxInt16)
+	}
+	return int16(value), remainingData, nil
+}
+
+func DeserializeSint32(data []byte) (int32, []byte, error) {
+	value, remainingData, err := DeserializeSint64(data)
+	if err != nil {
+		return 0, remainingData, err
+	}
+	if value < math.MinInt32 || value > math.MaxInt32 {
+		return 0, remainingData, fmt.Errorf("value %d does not fit in int32 range [%d, %d]", value, math.MinInt32, math.MaxInt32)
+	}
+	return int32(value), remainingData, nil
+}
+
+func DeserializeSint64(data []byte) (int64, []byte, error) {
+
+	if len(data) == 0 {
+		return 0, data, fmt.Errorf("no data to deserialize")
+	}
+
+	var header = data[0]
+	var headerType = types.TypeFromHeader(header)
+	var length = types.ValueFromHeader(header)
+	data = data[1:]
+
+		if len(data) == 0 {
+		return 0, data, fmt.Errorf("no data to deserialize")
+	}
+
+	// If the header is a SNibble, we can return the value directly
+	// For SNibble: bit 3 is sign, bits 0-2 are magnitude
+	if headerType == types.SNibble {
+		var negative = (length & 0x08) != 0
+		var magnitude = length & 0x7 // Get bits 0-2
+
+		if negative {
+			return -int64(magnitude), data, nil
+		} else {
+			return int64(magnitude), data, nil
+		}
+	}
+
+	if headerType != types.SInt {
+		return 0, data, fmt.Errorf("expected SInt type, got %v", headerType)
+	}
+
+	if len(data) < int(length) {
+		return 0, data, fmt.Errorf("insufficient data: need %d bytes, got %d", length, len(data))
+	}
+
+	// Get the value of the first byte of the data making sure to skip the negative bit
+	var value = int64(data[0] & 0x7f)
+
+	// If the high bit of the first byte is set then the value is negative
+	var negative = (data[0] & 0x80) != 0
+
+	// Add the rest of the data bytes to the value
+	for i := uint8(1); i < length; i++ {
+		value = value << 8
+		var dataByte = int64(data[i])
+		value = value | dataByte
+	}
+	data = data[length:]
+
+	if negative {
+		value = -value
+	}
+
+	return value, data, nil
+}
+
+//
+// Serialization functions
+// These functions serialize signed integers into a byte buffer.
+// All methods append to the existing buffer without clearing it.
+//
+
+func SerializeSint8(value int8, data *bytes.Buffer) {
+	// Append int8 as int64 to the buffer
+	SerializeSint64(int64(value), data)
+}
+
+func SerializeSint16(value int16, data *bytes.Buffer) {
+	// Append int16 as int64 to the buffer
+	SerializeSint64(int64(value), data)
+}
+
+func SerializeSint32(value int32, data *bytes.Buffer) {
+	// Append int32 as int64 to the buffer
+	SerializeSint64(int64(value), data)
+}
+
+func SerializeSint64(value int64, data *bytes.Buffer) {
+	// This function appends the serialized signed integer to the existing buffer
 
 	// Get the negative sign and the abs of the data since we will store the value as
 	// an unsigned integer with the high bit used as the negative sign
@@ -18,6 +159,22 @@ func SerializeSint(value int64, data *bytes.Buffer) {
 	// bit needs to add an extra byte so we need to check for values without the high bit set
 	var length uint8 = 0
 	switch {
+
+	case v <= 0xf:
+		// For SNibble, we encode sign in bit 3 and magnitude in bits 0-2
+		// This gives us range -7 to +7 (magnitude 0-7)
+		var nibble byte
+		if v > 7 {
+			// Value too large for SNibble, fall through to regular SInt encoding
+		} else {
+			if negative {
+				nibble = 0x8 | byte(v) // Set bit 3 for negative, store magnitude in bits 0-2
+			} else {
+				nibble = byte(v) // Just use the magnitude for positive values
+			}
+			data.WriteByte(types.CreateHeader(types.SNibble, nibble))
+			return
+		}
 
 	case v <= 0x7f:
 		length = 1
@@ -44,62 +201,25 @@ func SerializeSint(value int64, data *bytes.Buffer) {
 		length = 8
 	}
 
-	// Set the header for the type in the data buffer
+	// Set the header for the type in the data buffer (appends to buffer)
 	data.WriteByte(types.CreateHeader(types.SInt, length))
 
-	// Move the data into the data buffer
+	// Move the data into the data buffer (appends to buffer)
+	writeValueBytes(data, v, length, negative)
+}
+
+// Helper function to write value bytes in reverse order (big-endian)
+// Sets the high bit of the first byte if negative is true
+// Appends bytes to the buffer without clearing existing content
+func writeValueBytes(data *bytes.Buffer, value uint64, length uint8, negative bool) {
 	for i := uint8(length - 1); ; i-- {
-
-		var mask uint64 = 0xff << (i * 8)            // Create the mask to clear all bits other than they byte at position i
-		var maskedValue = v & mask                   // Clear all bits other than the byte at position i
-		var byteValue = byte(maskedValue >> (i * 8)) // Get the byte at position i
-
-		// For the first byte, if the value is negative then set the high bit
+		var byteValue = byte(value >> (i * 8))
 		if i == uint8(length-1) && negative {
 			byteValue = byteValue | 0x80
 		}
-
-		data.WriteByte(byteValue)
-
+		data.WriteByte(byteValue) // append byte to buffer
 		if i == 0 {
 			break
 		}
 	}
-}
-
-func DeserializeSint(data []byte) (int64, []byte) {
-
-	if len(data) == 0 {
-		return 0, data
-	}
-
-	var header = data[0]
-	data = data[1:]
-
-	var headerType = types.TypeFromHeader(header)
-	var length = types.ValueFromHeader(header)
-
-	if headerType != types.SInt {
-		return 0, data
-	}
-
-	// Get the value of the first byte of the data making sure to skip the negative bit
-	var value = int64(data[0] & 0x7f)
-
-	// If the high bit of the first byte is set then the value is negative
-	var negative = (data[0] & 0x80) != 0
-
-	// Add the rest of the data bytes to the value
-	for i := uint8(1); i < length; i++ {
-		value = value << 8
-		var dataByte = int64(data[i])
-		value = value | dataByte
-	}
-	data = data[length:]
-
-	if negative {
-		value = -value
-	}
-
-	return value, data
 }
