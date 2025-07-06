@@ -1,14 +1,14 @@
 package serialize
 
 import (
-	"bytes"
 	"fmt"
 	"reflect"
+	"io"
 )
 
 // SerializeStruct serializes a struct by serializing each exported field in order
 // Unexported fields are skipped
-func SerializeStruct(value interface{}, data *bytes.Buffer) error {
+func SerializeStruct(value interface{}, w io.Writer) error {
 	rv := reflect.ValueOf(value)
 
 	// Ensure we have a struct
@@ -24,7 +24,7 @@ func SerializeStruct(value interface{}, data *bytes.Buffer) error {
 		}
 
 		// Recursively call Serialize to serialize the field value
-		if err := Serialize(rv.Field(i).Interface(), data); err != nil {
+		if err := Serialize(rv.Field(i).Interface(), w); err != nil {
 			return fmt.Errorf("error serializing field %s: %w", field.Name, err)
 		}
 	}

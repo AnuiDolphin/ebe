@@ -1,10 +1,10 @@
 package serialize
 
 import (
-	"bytes"
 	"ebe/types"
 	"ebe/utils"
 	"fmt"
+	"io"
 	"math"
 )
 
@@ -127,27 +127,26 @@ func DeserializeSint64(data []byte) (int64, []byte, error) {
 
 //
 // Serialization functions
-// These functions serialize signed integers into a byte buffer.
-// All methods append to the existing buffer without clearing it.
+// These functions serialize signed integers into a writer.
 //
 
-func SerializeSint8(value int8, data *bytes.Buffer) {
-	// Append int8 as int64 to the buffer
-	SerializeSint64(int64(value), data)
+func SerializeSint8(value int8, writer io.Writer) error {
+	// Serialize int8 as int64
+	return SerializeSint64(int64(value), writer)
 }
 
-func SerializeSint16(value int16, data *bytes.Buffer) {
-	// Append int16 as int64 to the buffer
-	SerializeSint64(int64(value), data)
+func SerializeSint16(value int16, writer io.Writer) error {
+	// Serialize int16 as int64
+	return SerializeSint64(int64(value), writer)
 }
 
-func SerializeSint32(value int32, data *bytes.Buffer) {
-	// Append int32 as int64 to the buffer
-	SerializeSint64(int64(value), data)
+func SerializeSint32(value int32, writer io.Writer) error {
+	// Serialize int32 as int64
+	return SerializeSint64(int64(value), writer)
 }
 
-func SerializeSint64(value int64, data *bytes.Buffer) {
-	// This function appends the serialized signed integer to the existing buffer
+func SerializeSint64(value int64, writer io.Writer) error {
+	// This function writes the serialized signed integer to the writer
 
 	// Get the negative sign and the abs of the data since we will store the value as
 	// an unsigned integer with the high bit used as the negative sign
@@ -169,8 +168,7 @@ func SerializeSint64(value int64, data *bytes.Buffer) {
 		} else {
 			nibble = byte(v) // Just use the magnitude for positive values
 		}
-		data.WriteByte(types.CreateHeader(types.SNibble, nibble))
-		return
+		return utils.WriteByte(writer, types.CreateHeader(types.SNibble, nibble))
 
 	case v <= 0x7f:
 		length = 1
@@ -197,25 +195,29 @@ func SerializeSint64(value int64, data *bytes.Buffer) {
 		length = 8
 	}
 
-	// Set the header for the type in the data buffer (appends to buffer)
-	data.WriteByte(types.CreateHeader(types.SInt, length))
+	// Set the header for the type
+	if err := utils.WriteByte(writer, types.CreateHeader(types.SInt, length)); err != nil {
+		return err
+	}
 
-	// Move the data into the data buffer (appends to buffer)
-	writeValueBytes(data, v, length, negative)
+	// Write the data bytes
+	return writeValueBytes(writer, v, length, negative)
 }
 
 // Helper function to write value bytes in reverse order (big-endian)
 // Sets the high bit of the first byte if negative is true
-// Appends bytes to the buffer without clearing existing content
-func writeValueBytes(data *bytes.Buffer, value uint64, length uint8, negative bool) {
+func writeValueBytes(writer io.Writer, value uint64, length uint8, negative bool) error {
 	for i := uint8(length - 1); ; i-- {
 		var byteValue = byte(value >> (i * 8))
 		if i == uint8(length-1) && negative {
 			byteValue = byteValue | 0x80
 		}
-		data.WriteByte(byteValue) // append byte to buffer
+		if err := utils.WriteByte(writer, byteValue); err != nil {
+			return err
+		}
 		if i == 0 {
 			break
 		}
 	}
+	return nil
 }

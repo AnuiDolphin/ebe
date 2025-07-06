@@ -206,7 +206,7 @@ func testValue(t *testing.T, value interface{}, expectedType types.Types, descri
 		return
 	}
 
-	_, err = serialize.Deserialize(data.Bytes(), readValue)
+	_, err = serialize.Deserialize(bytes.NewReader(data.Bytes()), readValue)
 	if err != nil {
 		t.Errorf("%s: Deserialization error: %v", description, err)
 		return

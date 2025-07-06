@@ -3,37 +3,38 @@ package serialize
 import (
 	"bytes"
 	"ebe/types"
+	"ebe/utils"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"math"
 )
 
-func SerializeFloat64(value float64, data *bytes.Buffer) {
-	// This function appends the serialized float64 to the existing buffer
-	// Figure out what size of float is needed for the data
-	switch {
+func SerializeFloat64(value float64, writer io.Writer) error {
 
-	case value >= -math.SmallestNonzeroFloat32 && value <= math.MaxFloat32:
-		// Set the header for the type in the data buffer
-		data.WriteByte(types.CreateHeader(types.Float, 4))
-
-		// Write the value
-		_ = binary.Write(data, binary.LittleEndian, float32(value))
-
-	default:
-		// Set the header for the type in the data buffer
-		data.WriteByte(types.CreateHeader(types.Float, 8))
-
-		// Write the value
-		_ = binary.Write(data, binary.LittleEndian, float64(value))
+	// If the value fits into a float32, then serialize as a float32
+	if value >= -math.SmallestNonzeroFloat32 && value <= math.MaxFloat32 {
+		return SerializeFloat32(float32(value), writer)
 	}
+
+	// Write the header as float64
+	if err := utils.WriteByte(writer, types.CreateHeader(types.Float, 8)); err != nil {
+		return err
+	}
+
+	// Write the value
+	return binary.Write(writer, binary.LittleEndian, float64(value))
 }
 
-func SerializeFloat32(value float32, data *bytes.Buffer) {
-	// This function appends the serialized float32 to the existing buffer
-	// float32 always uses 4 bytes
-	data.WriteByte(types.CreateHeader(types.Float, 4))
-	_ = binary.Write(data, binary.LittleEndian, value)
+func SerializeFloat32(value float32, writer io.Writer) error {
+
+	// Write the header as float32
+	if err := utils.WriteByte(writer, types.CreateHeader(types.Float, 4)); err != nil {
+		return err
+	}
+
+	// Write the value
+	return binary.Write(writer, binary.LittleEndian, value)
 }
 
 func DeserializeFloat(data []byte) (float64, []byte, error) {

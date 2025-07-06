@@ -3,13 +3,13 @@ package serialize
 import (
 	"bytes"
 	"ebe/types"
-	"ebe/utils"
 	"fmt"
+	"io"
 	"reflect"
 )
 
-func SerializeArray(value interface{}, data *bytes.Buffer) error {
-	// This function appends the serialized array to the existing buffer
+// This function appends the serialized array to the existing writer
+func SerializeArray(value interface{}, w io.Writer) error {
 
 	// Get the reflect value to work with arrays/slices
 	rv := reflect.ValueOf(value)
@@ -31,19 +31,19 @@ func SerializeArray(value interface{}, data *bytes.Buffer) error {
 	// Write the array header with length (similar to string format)
 	// Special case arrays that are less than 8 elements in length
 	if length <= 0x07 {
-		data.WriteByte(types.CreateHeader(types.Array, byte(length)))
+		w.Write([]byte{types.CreateHeader(types.Array, byte(length))})
 	} else {
-		data.WriteByte(types.CreateHeader(types.Array, 0x08))
-		SerializeUint64(uint64(length), data)
+		w.Write([]byte{types.CreateHeader(types.Array, 0x08)})
+		SerializeUint64(uint64(length), w)
 	}
 
 	// Write the element type
-	data.WriteByte(byte(elementType))
+	w.Write([]byte{byte(elementType)})
 
 	// Serialize each element with their normal headers
 	for i := range length {
 		element := rv.Index(i).Interface()
-		if err := Serialize(element, data); err != nil {
+		if err := Serialize(element, w); err != nil {
 			return fmt.Errorf("failed to serialize array element %d: %w", i, err)
 		}
 	}
@@ -113,7 +113,7 @@ func DeserializeArray(data []byte, out interface{}) ([]byte, error) {
 		elemPtr := outElem.Index(i).Addr().Interface()
 
 		// Deserialize the element using the generic deserializer
-		newRemaining, err := Deserialize(remaining, elemPtr)
+		newRemaining, err := Deserialize(bytes.NewReader(remaining), elemPtr)
 		if err != nil {
 			return remaining, fmt.Errorf("failed to deserialize array element %d: %w", i, err)
 		}
@@ -149,89 +149,89 @@ func getTypeForReflectType(t reflect.Type) (types.Types, error) {
 }
 
 // deserializeArrayElement deserializes a single array element of the specified type
-func deserializeArrayElement(data []byte, elementType types.Types, outValue reflect.Value) ([]byte, error) {
-	switch elementType {
-	case types.UNibble:
-		value, remaining, err := DeserializeUNibble(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set UNibble value: %w", err)
-		}
-		return remaining, nil
+// func deserializeArrayElement(data []byte, elementType types.Types, outValue reflect.Value) ([]byte, error) {
+// 	switch elementType {
+// 	case types.UNibble:
+// 		value, remaining, err := DeserializeUNibble(data)
+// 		if err != nil {
+// 			return remaining, err
+// 		}
+// 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+// 			return remaining, fmt.Errorf("failed to set UNibble value: %w", err)
+// 		}
+// 		return remaining, nil
 
-	case types.SNibble:
-		value, remaining, err := DeserializeSNibble(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set SNibble value: %w", err)
-		}
-		return remaining, nil
+// 	case types.SNibble:
+// 		value, remaining, err := DeserializeSNibble(data)
+// 		if err != nil {
+// 			return remaining, err
+// 		}
+// 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+// 			return remaining, fmt.Errorf("failed to set SNibble value: %w", err)
+// 		}
+// 		return remaining, nil
 
-	case types.UInt:
-		value, remaining, err := DeserializeUint64(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set UInt value: %w", err)
-		}
-		return remaining, nil
+// 	case types.UInt:
+// 		value, remaining, err := DeserializeUint64(data)
+// 		if err != nil {
+// 			return remaining, err
+// 		}
+// 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+// 			return remaining, fmt.Errorf("failed to set UInt value: %w", err)
+// 		}
+// 		return remaining, nil
 
-	case types.SInt:
-		value, remaining, err := DeserializeSint64(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set SInt value: %w", err)
-		}
-		return remaining, nil
+// 	case types.SInt:
+// 		value, remaining, err := DeserializeSint64(data)
+// 		if err != nil {
+// 			return remaining, err
+// 		}
+// 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+// 			return remaining, fmt.Errorf("failed to set SInt value: %w", err)
+// 		}
+// 		return remaining, nil
 
-	case types.Float:
-		value, remaining, err := DeserializeFloat(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set Float value: %w", err)
-		}
-		return remaining, nil
+// 	case types.Float:
+// 		value, remaining, err := DeserializeFloat(data)
+// 		if err != nil {
+// 			return remaining, err
+// 		}
+// 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+// 			return remaining, fmt.Errorf("failed to set Float value: %w", err)
+// 		}
+// 		return remaining, nil
 
-	case types.Boolean:
-		value, remaining, err := DeserializeBoolean(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set Boolean value: %w", err)
-		}
-		return remaining, nil
+// 	case types.Boolean:
+// 		value, remaining, err := DeserializeBoolean(data)
+// 		if err != nil {
+// 			return remaining, err
+// 		}
+// 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+// 			return remaining, fmt.Errorf("failed to set Boolean value: %w", err)
+// 		}
+// 		return remaining, nil
 
-	case types.String:
-		value, remaining, err := DeserializeString(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set String value: %w", err)
-		}
-		return remaining, nil
+// 	case types.String:
+// 		value, remaining, err := DeserializeString(data)
+// 		if err != nil {
+// 			return remaining, err
+// 		}
+// 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+// 			return remaining, fmt.Errorf("failed to set String value: %w", err)
+// 		}
+// 		return remaining, nil
 
-	case types.Buffer:
-		value, remaining, err := DeserializeBuffer(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set Buffer value: %w", err)
-		}
-		return remaining, nil
+// 	case types.Buffer:
+// 		value, remaining, err := DeserializeBuffer(data)
+// 		if err != nil {
+// 			return remaining, err
+// 		}
+// 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+// 			return remaining, fmt.Errorf("failed to set Buffer value: %w", err)
+// 		}
+// 		return remaining, nil
 
-	default:
-		return data, fmt.Errorf("unsupported array element type: %s", types.TypeName(elementType))
-	}
-}
+// 	default:
+// 		return data, fmt.Errorf("unsupported array element type: %s", types.TypeName(elementType))
+// 	}
+// }

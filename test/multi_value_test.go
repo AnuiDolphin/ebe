@@ -34,42 +34,42 @@ func TestMultipleValueSerialization(t *testing.T) {
 
 	// Deserialize each value manually
 	var val1 uint64
-	remaining, err := serialize.Deserialize(remaining, &val1)
+	remaining, err := serialize.Deserialize(bytes.NewReader(remaining), &val1)
 	if err != nil {
 		t.Fatalf("Error deserializing value 1: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val1)
 
 	var val2 string
-	remaining, err = serialize.Deserialize(remaining, &val2)
+	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val2)
 	if err != nil {
 		t.Fatalf("Error deserializing value 2: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val2)
 
 	var val3 int64
-	remaining, err = serialize.Deserialize(remaining, &val3)
+	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val3)
 	if err != nil {
 		t.Fatalf("Error deserializing value 3: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val3)
 
 	var val4 string
-	remaining, err = serialize.Deserialize(remaining, &val4)
+	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val4)
 	if err != nil {
 		t.Fatalf("Error deserializing value 4: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val4)
 
 	var val5 bool
-	remaining, err = serialize.Deserialize(remaining, &val5)
+	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val5)
 	if err != nil {
 		t.Fatalf("Error deserializing value 5: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val5)
 
 	var val6 float64
-	remaining, err = serialize.Deserialize(remaining, &val6)
+	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val6)
 	if err != nil {
 		t.Fatalf("Error deserializing value 6: %v", err)
 	}

@@ -1,19 +1,22 @@
 package serialize
 
 import (
-	"bytes"
 	"ebe/types"
 	"fmt"
+	"io"
 )
 
-func SerializeBoolean(value bool, data *bytes.Buffer) {
-	// This function appends the serialized boolean to the existing buffer
+func SerializeBoolean(value bool, w io.Writer) error {
+	// This function appends the serialized boolean to the existing writer
 	// Set the header for the type and put the boolean value in the value nibble
+	var b byte
 	if value {
-		data.WriteByte(types.CreateHeader(types.Boolean, 1)) // append to buffer
+		b = types.CreateHeader(types.Boolean, 1)
 	} else {
-		data.WriteByte(types.CreateHeader(types.Boolean, 0)) // append to buffer
+		b = types.CreateHeader(types.Boolean, 0)
 	}
+	_, err := w.Write([]byte{b})
+	return err
 }
 
 func DeserializeBoolean(data []byte) (bool, []byte, error) {

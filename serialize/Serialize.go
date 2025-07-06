@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 )
 
-// Serialize takes any supported value and serializes it to the buffer
-// This function appends the serialized value to the existing buffer
-func Serialize(value interface{}, data *bytes.Buffer) error {
-
+// Serialize takes any supported value and serializes it to the writer
+func Serialize(value interface{}, w io.Writer) error {
 	// Handle structs by serializing each exported field in order
 	rv := reflect.ValueOf(value)
 
@@ -26,68 +25,67 @@ func Serialize(value interface{}, data *bytes.Buffer) error {
 	switch v := value.(type) {
 
 	case json.RawMessage:
-		return SerializeJson(v, data)
+		return SerializeJson(v, w)
 
 	case uint64:
-		SerializeUint64(v, data)
+		return SerializeUint64(v, w)
 
 	case uint32:
-		SerializeUint64(uint64(v), data)
+		return SerializeUint64(uint64(v), w)
 
 	case uint16:
-		SerializeUint64(uint64(v), data)
+		return SerializeUint64(uint64(v), w)
 
 	case uint8:
-		SerializeUint64(uint64(v), data)
+		return SerializeUint64(uint64(v), w)
 
 	case uint:
-		SerializeUint64(uint64(v), data)
+		return SerializeUint64(uint64(v), w)
 
 	case int64:
-		SerializeSint64(v, data)
+		return SerializeSint64(v, w)
 
 	case int32:
-		SerializeSint64(int64(v), data)
+		return SerializeSint64(int64(v), w)
 
 	case int16:
-		SerializeSint64(int64(v), data)
+		return SerializeSint64(int64(v), w)
 
 	case int8:
-		SerializeSint64(int64(v), data)
+		return SerializeSint64(int64(v), w)
 
 	case int:
-		SerializeSint64(int64(v), data)
+		return SerializeSint64(int64(v), w)
 
 	case float64:
-		SerializeFloat64(v, data)
+		return SerializeFloat64(v, w)
 
 	case float32:
-		SerializeFloat32(v, data)
+		return SerializeFloat32(v, w)
 
 	case bool:
-		SerializeBoolean(v, data)
+		return SerializeBoolean(v, w)
 
 	case string:
-		SerializeString(v, data)
+		return SerializeString(v, w)
 
 	case []byte:
-		SerializeBuffer(v, data)
+		return SerializeBuffer(v, w)
 
 	case *bytes.Buffer:
-		SerializeBuffer(v.Bytes(), data)
+		return SerializeBuffer(v.Bytes(), w)
 
 	default:
 		// Check if it's a struct
 		if rv.Kind() == reflect.Struct {
-			return SerializeStruct(value, data)
+			return SerializeStruct(value, w)
 		}
 
 		// Check if it's an array or slice
 		if rv.Kind() == reflect.Array || rv.Kind() == reflect.Slice {
-			return SerializeArray(value, data)
+			return SerializeArray(value, w)
 		}
 
 		return fmt.Errorf("unsupported type for serialization: %T", value)
 	}
-	return nil
 }

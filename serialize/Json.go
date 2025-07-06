@@ -1,23 +1,27 @@
 package serialize
 
 import (
-	"bytes"
 	"ebe/types"
 	"encoding/json"
 	"fmt"
+	"io"
 )
 
 // SerializeJson serializes a json.RawMessage
 // The jsonMessage parameter should come from json.Marshal() wrapped as json.RawMessage
-func SerializeJson(jsonMessage json.RawMessage, data *bytes.Buffer) error {
+func SerializeJson(jsonMessage json.RawMessage, w io.Writer) error {
 	// Write header with JSON type
-	data.WriteByte(types.CreateHeader(types.Json, 0x00))
-	SerializeUint64(uint64(len(jsonMessage)), data)
+	_, err := w.Write([]byte{types.CreateHeader(types.Json, 0x00)})
+	if err != nil {
+		return err
+	}
+	if err := SerializeUint64(uint64(len(jsonMessage)), w); err != nil {
+		return err
+	}
 
 	// Write the JSON bytes
-	data.Write(jsonMessage)
-
-	return nil
+	_, err = w.Write(jsonMessage)
+	return err
 }
 
 // DeserializeJson deserializes JSON data and unmarshals it into the provided output

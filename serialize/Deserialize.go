@@ -1,14 +1,21 @@
 package serialize
 
 import (
+	"bytes"
 	"ebe/types"
 	"ebe/utils"
 	"fmt"
+	"io"
 	"reflect"
 )
 
 // Deserialize reads the serialized type from the header and deserializes into the provided output parameter
-func Deserialize(data []byte, out interface{}) ([]byte, error) {
+func Deserialize(r io.Reader, out interface{}) ([]byte, error) {
+	// Read all data from the reader into a byte slice
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
 
 	// Validate and get the output value from within the interface{}
 	outValue, err := getOutputValue(out)
@@ -79,7 +86,7 @@ func deserializeStruct(data []byte, structValue reflect.Value) ([]byte, error) {
 		fieldPtr := field.Addr().Interface()
 
 		// Recursively call Deserialize to deserialize into this field
-		newRemaining, err := Deserialize(remaining, fieldPtr)
+		newRemaining, err := Deserialize(bytes.NewReader(remaining), fieldPtr)
 		if err != nil {
 			return remaining, fmt.Errorf("failed to deserialize field '%s': %w", fieldType.Name, err)
 		}
@@ -183,8 +190,12 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.Array:
-		// Use the dedicated DeserializeArray function
-		return DeserializeArray(data, outValue.Addr().Interface())
+		// Use the dedicated DeserializeArray function with streaming
+		remaining, err := DeserializeArray(data, outValue.Addr().Interface())
+		if err != nil {
+			return data, err
+		}
+		return remaining, nil
 
 	case types.Json:
 		// Use the dedicated DeserializeJson function

@@ -1,14 +1,13 @@
 package serialize
 
 import (
-	"bytes"
 	"ebe/types"
 	"fmt"
+	"io"
 )
 
-func SerializeString(value string, data *bytes.Buffer) {
-
-	// This function appends the serialized string to the existing buffer
+func SerializeString(value string, w io.Writer) error {
+	// This function appends the serialized string to the existing writer
 	// Write the length of the string as an [UInt]
 	var length = len(value)
 
@@ -17,14 +16,23 @@ func SerializeString(value string, data *bytes.Buffer) {
 	// The high bit of the nibble will be 0 if the length is in the nibble and will be 1 if the length is in a following UInt
 	// Note: it is legal to have a zero length string so zero can't be used as the indicator
 	if length <= 0x07 {
-		data.WriteByte(types.CreateHeader(types.String, byte(length)))
+		_, err := w.Write([]byte{types.CreateHeader(types.String, byte(length))})
+		if err != nil {
+			return err
+		}
 	} else {
-		data.WriteByte(types.CreateHeader(types.String, 0x08))
-		SerializeUint64(uint64(length), data)
+		_, err := w.Write([]byte{types.CreateHeader(types.String, 0x08)})
+		if err != nil {
+			return err
+		}
+		if err := SerializeUint64(uint64(length), w); err != nil {
+			return err
+		}
 	}
 
 	// Write the raw string data
-	data.WriteString(value)
+	_, err := w.Write([]byte(value))
+	return err
 }
 
 func DeserializeString(data []byte) (string, []byte, error) {

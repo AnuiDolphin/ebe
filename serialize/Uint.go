@@ -3,7 +3,9 @@ package serialize
 import (
 	"bytes"
 	"ebe/types"
+	"ebe/utils"
 	"fmt"
+	"io"
 	"math"
 )
 
@@ -107,26 +109,26 @@ func DeserializeUint(data []byte) (uint64, []byte, error) {
 //
 // Serialization functions
 // These functions serialize unsigned integers into a byte buffer.
-// All methods append to the existing buffer without clearing it.
+// All methods write to the writer.
 //
 
-func SerializeUint8(value uint8, data *bytes.Buffer) {
-	// Append uint8 as uint64 to the buffer
-	SerializeUint64(uint64(value), data)
+func SerializeUint8(value uint8, writer io.Writer) error {
+	// Serialize uint8 as uint64
+	return SerializeUint64(uint64(value), writer)
 }
 
-func SerializeUint16(value uint16, data *bytes.Buffer) {
-	// Append uint16 as uint64 to the buffer
-	SerializeUint64(uint64(value), data)
+func SerializeUint16(value uint16, writer io.Writer) error {
+	// Serialize uint16 as uint64
+	return SerializeUint64(uint64(value), writer)
 }
 
-func SerializeUint32(value uint32, data *bytes.Buffer) {
-	// Append uint32 as uint64 to the buffer
-	SerializeUint64(uint64(value), data)
+func SerializeUint32(value uint32, writer io.Writer) error {
+	// Serialize uint32 as uint64
+	return SerializeUint64(uint64(value), writer)
 }
 
-func SerializeUint64(value uint64, data *bytes.Buffer) {
-	// This function appends the serialized unsigned integer to the existing buffer
+func SerializeUint64(value uint64, writer io.Writer) error {
+	// This function writes the serialized unsigned integer to the writer
 
 	// Figure out what size of integer is needed for the data
 	var length uint8 = 0
@@ -137,11 +139,10 @@ func SerializeUint64(value uint64, data *bytes.Buffer) {
 	// put the value in the lsb nibble of the header
 	case value <= 0x0f:
 		if value == 0x00 {
-			data.WriteByte(types.CreateHeader(types.SNibble, byte(value)))
+			return utils.WriteByte(writer, types.CreateHeader(types.SNibble, byte(value)))
 		} else {
-			data.WriteByte(types.CreateHeader(types.UNibble, byte(value)))
+			return utils.WriteByte(writer, types.CreateHeader(types.UNibble, byte(value)))
 		}
-		return
 
 	case value <= math.MaxUint8:
 		length = 1
@@ -168,14 +169,38 @@ func SerializeUint64(value uint64, data *bytes.Buffer) {
 		length = 8
 	}
 
-	// Set the header for the type in the data buffer (appends to buffer)
-	data.WriteByte(types.CreateHeader(types.UInt, length))
+	// Set the header for the type
+	if err := utils.WriteByte(writer, types.CreateHeader(types.UInt, length)); err != nil {
+		return err
+	}
 
-	// Move the data into the data buffer (appends bytes to buffer)
+	// Write the data bytes
 	for i := uint8(length - 1); ; i-- {
-		data.WriteByte(byte(value >> (i * 8))) // append byte to buffer
+		if err := utils.WriteByte(writer, byte(value >> (i * 8))); err != nil {
+			return err
+		}
 		if i == 0 {
 			break
 		}
 	}
+	
+	return nil
+}
+
+// Wrapper functions that preserve the *bytes.Buffer interface for backward compatibility
+
+func SerializeUint8Buffer(value uint8, data *bytes.Buffer) error {
+	return SerializeUint8(value, data)
+}
+
+func SerializeUint16Buffer(value uint16, data *bytes.Buffer) error {
+	return SerializeUint16(value, data)
+}
+
+func SerializeUint32Buffer(value uint32, data *bytes.Buffer) error {
+	return SerializeUint32(value, data)
+}
+
+func SerializeUint64Buffer(value uint64, data *bytes.Buffer) error {
+	return SerializeUint64(value, data)
 }

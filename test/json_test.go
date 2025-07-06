@@ -160,7 +160,7 @@ func TestJsonIntegrationWithSerialize(t *testing.T) {
 
 	// Deserialize using main Deserialize function (should auto-detect JSON type)
 	var result Person
-	remaining, err := serialize.Deserialize(buffer.Bytes(), &result)
+	remaining, err := serialize.Deserialize(bytes.NewReader(buffer.Bytes()), &result)
 	if err != nil {
 		t.Fatalf("Deserialize failed: %v", err)
 	}
@@ -204,14 +204,14 @@ func TestJsonVsRegularSerialization(t *testing.T) {
 
 	// Struct should deserialize with regular Deserialize
 	var structResult Person
-	_, err = serialize.Deserialize(structBuffer.Bytes(), &structResult)
+	_, err = serialize.Deserialize(bytes.NewReader(structBuffer.Bytes()), &structResult)
 	if err != nil {
 		t.Fatalf("Struct deserialize failed: %v", err)
 	}
 
 	// JSON should deserialize with main Deserialize (auto-detects JSON type)
 	var jsonResult Person
-	_, err = serialize.Deserialize(jsonBuffer.Bytes(), &jsonResult)
+	_, err = serialize.Deserialize(bytes.NewReader(jsonBuffer.Bytes()), &jsonResult)
 	if err != nil {
 		t.Fatalf("JSON deserialize failed: %v", err)
 	}

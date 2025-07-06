@@ -69,7 +69,7 @@ func TestArraySerialization(t *testing.T) {
 			output := reflect.New(outputType).Interface()
 
 			// Deserialize
-			remaining, err := serialize.Deserialize(buf.Bytes(), output)
+			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
 			}
@@ -126,7 +126,7 @@ func TestEmptyArrays(t *testing.T) {
 			outputType := reflect.TypeOf(tc.expected)
 			output := reflect.New(outputType).Interface()
 
-			remaining, err := serialize.Deserialize(buf.Bytes(), output)
+			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
 			}
@@ -186,7 +186,7 @@ func TestLargeArrays(t *testing.T) {
 			outputType := reflect.TypeOf(tc.expected)
 			output := reflect.New(outputType).Interface()
 
-			remaining, err := serialize.Deserialize(buf.Bytes(), output)
+			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
 			}
@@ -243,7 +243,7 @@ func TestArrayWithSpecialValues(t *testing.T) {
 			outputType := reflect.TypeOf(tc.expected)
 			output := reflect.New(outputType).Interface()
 
-			remaining, err := serialize.Deserialize(buf.Bytes(), output)
+			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
 			}

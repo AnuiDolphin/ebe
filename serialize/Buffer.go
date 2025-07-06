@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"ebe/types"
 	"fmt"
+	"io"
 )
 
-func SerializeBuffer(value []byte, data *bytes.Buffer) {
-	// This function appends the serialized buffer to the existing buffer
+func SerializeBuffer(value []byte, w io.Writer) error {
+	// This function appends the serialized buffer to the existing writer
 	// Write the length of the buffer as an [UInt]
 	var length = len(value)
 
@@ -16,14 +17,23 @@ func SerializeBuffer(value []byte, data *bytes.Buffer) {
 	// The high bit of the nibble will be 0 if the length is in the nibble and will be 1 if the length is in a following UInt
 	// Note: it is legal to have a zero length buffer so zero can't be used as the indicator
 	if length <= 0x07 {
-		data.WriteByte(types.CreateHeader(types.Buffer, byte(length)))
+		_, err := w.Write([]byte{types.CreateHeader(types.Buffer, byte(length))})
+		if err != nil {
+			return err
+		}
 	} else {
-		data.WriteByte(types.CreateHeader(types.Buffer, 0x08))
-		SerializeUint64(uint64(length), data)
+		_, err := w.Write([]byte{types.CreateHeader(types.Buffer, 0x08)})
+		if err != nil {
+			return err
+		}
+		if err := SerializeUint64(uint64(length), w); err != nil {
+			return err
+		}
 	}
 
 	// Write the raw buffer data
-	data.Write(value)
+	_, err := w.Write(value)
+	return err
 }
 
 func DeserializeBuffer(data []byte) (*bytes.Buffer, []byte, error) {

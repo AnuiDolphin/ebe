@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"ebe/types"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 )
@@ -304,4 +305,11 @@ func SetValueWithConversion(rhs reflect.Value, lhs interface{}) error {
 	}
 
 	return fmt.Errorf("cannot convert %v to %v", valueType, outType)
+}
+
+// WriteByte writes a single byte to the provided io.Writer.
+func WriteByte(w io.Writer, b byte) error {
+	buf := []byte{b}
+	_, err := w.Write(buf)
+	return err
 }
