@@ -74,13 +74,9 @@ func TestStructSerialization(t *testing.T) {
 	}
 
 	var out exampleStruct
-	remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+	err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 	if err != nil {
 		t.Fatalf("Error deserializing struct: %v", err)
-	}
-
-	if len(remaining) != 0 {
-		t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 	}
 
 	t.Logf("Deserialized struct: %+v", out)
@@ -104,13 +100,9 @@ func TestEmptyStruct(t *testing.T) {
 	}
 
 	var out emptyStruct
-	remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+	err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 	if err != nil {
 		t.Fatalf("Error deserializing empty struct: %v", err)
-	}
-
-	if len(remaining) != 0 {
-		t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 	}
 
 	if !reflect.DeepEqual(value, out) {
@@ -134,13 +126,9 @@ func TestMixedExportStruct(t *testing.T) {
 	t.Logf("Serialized data: %v bytes", buf.Len())
 
 	var out mixedExportStruct
-	remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+	err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 	if err != nil {
 		t.Fatalf("Error deserializing mixed export struct: %v", err)
-	}
-
-	if len(remaining) != 0 {
-		t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 	}
 
 	// Only public fields should be preserved
@@ -173,13 +161,9 @@ func TestNestedStruct(t *testing.T) {
 	}
 
 	var out nestedStruct
-	remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+	err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 	if err != nil {
 		t.Fatalf("Error deserializing nested struct: %v", err)
-	}
-
-	if len(remaining) != 0 {
-		t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 	}
 
 	if !reflect.DeepEqual(value, out) {
@@ -212,13 +196,9 @@ func TestComprehensiveStruct(t *testing.T) {
 	t.Logf("Serialized data: %v bytes", buf.Len())
 
 	var out comprehensiveStruct
-	remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+	err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 	if err != nil {
 		t.Fatalf("Error deserializing comprehensive struct: %v", err)
-	}
-
-	if len(remaining) != 0 {
-		t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 	}
 
 	// Use custom comparison that handles float precision differences
@@ -279,13 +259,9 @@ func TestStructWithSpecialFloats(t *testing.T) {
 				F64 float64
 			}
 
-			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+			err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 			if err != nil {
 				t.Fatalf("Error deserializing struct with %s: %v", tc.name, err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 			}
 
 			// Compare each field individually for better NaN handling
@@ -334,13 +310,9 @@ func TestStructWithEdgeCaseValues(t *testing.T) {
 			}
 
 			var out exampleStruct
-			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+			err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 			}
 
 			if !reflect.DeepEqual(tc.value, out) {
@@ -381,7 +353,7 @@ func TestStructSerializationErrors(t *testing.T) {
 func TestStructDeserializationErrors(t *testing.T) {
 	t.Run("nil output", func(t *testing.T) {
 		data := []byte{0x05} // Some dummy data
-		_, err := serialize.Deserialize(bytes.NewReader(data), nil)
+		err := serialize.Deserialize(bytes.NewReader(data), nil)
 		if err == nil {
 			t.Error("Expected error when deserializing to nil, got nil")
 		}
@@ -390,7 +362,7 @@ func TestStructDeserializationErrors(t *testing.T) {
 	t.Run("non-pointer output", func(t *testing.T) {
 		data := []byte{0x05} // Some dummy data
 		var out exampleStruct
-		_, err := serialize.Deserialize(bytes.NewReader(data), out) // Not a pointer
+		err := serialize.Deserialize(bytes.NewReader(data), out) // Not a pointer
 		if err == nil {
 			t.Error("Expected error when deserializing to non-pointer, got nil")
 		}
@@ -399,7 +371,7 @@ func TestStructDeserializationErrors(t *testing.T) {
 	t.Run("corrupted data", func(t *testing.T) {
 		data := []byte{0xFF, 0xFF, 0xFF} // Invalid data
 		var out exampleStruct
-		_, err := serialize.Deserialize(bytes.NewReader(data), &out)
+		err := serialize.Deserialize(bytes.NewReader(data), &out)
 		if err == nil {
 			t.Error("Expected error when deserializing corrupted data, got nil")
 		}
@@ -416,7 +388,7 @@ func TestStructDeserializationErrors(t *testing.T) {
 		// Use only part of the data
 		incompleteData := buf.Bytes()[:len(buf.Bytes())/2]
 		var out exampleStruct
-		_, err := serialize.Deserialize(bytes.NewReader(incompleteData), &out)
+		err := serialize.Deserialize(bytes.NewReader(incompleteData), &out)
 		if err == nil {
 			t.Error("Expected error when deserializing incomplete data, got nil")
 		}
@@ -450,13 +422,9 @@ func TestDeepNestedStruct(t *testing.T) {
 	}
 
 	var out Level1
-	remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+	err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 	if err != nil {
 		t.Fatalf("Error deserializing deep nested struct: %v", err)
-	}
-
-	if len(remaining) != 0 {
-		t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 	}
 
 	if !reflect.DeepEqual(value, out) {
@@ -501,13 +469,9 @@ func TestStructWithBufferField(t *testing.T) {
 			}
 
 			var out BufferStruct
-			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+			err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 			}
 
 			// Custom comparison to handle nil vs empty slice
@@ -544,13 +508,9 @@ func TestStructWithAllNibbleValues(t *testing.T) {
 			}
 
 			var out NibbleStruct
-			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
+			err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), &out)
 			if err != nil {
 				t.Fatalf("Error deserializing nibble struct: %v", err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Expected no remaining bytes, got %d", len(remaining))
 			}
 
 			if !reflect.DeepEqual(tc, out) {

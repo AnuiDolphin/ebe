@@ -29,56 +29,51 @@ func TestMultipleValueSerialization(t *testing.T) {
 	t.Logf("Serialized %d values into %d bytes", len(values), data.Len())
 
 	// Test manual deserialization of multiple values
-	remaining := data.Bytes()
+	reader := bytes.NewReader(data.Bytes())
 	var deserializedValues []interface{}
 
 	// Deserialize each value manually
 	var val1 uint64
-	remaining, err := serialize.Deserialize(bytes.NewReader(remaining), &val1)
+	err := serialize.Deserialize(reader, &val1)
 	if err != nil {
 		t.Fatalf("Error deserializing value 1: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val1)
 
 	var val2 string
-	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val2)
+	err = serialize.Deserialize(reader, &val2)
 	if err != nil {
 		t.Fatalf("Error deserializing value 2: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val2)
 
 	var val3 int64
-	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val3)
+	err = serialize.Deserialize(reader, &val3)
 	if err != nil {
 		t.Fatalf("Error deserializing value 3: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val3)
 
 	var val4 string
-	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val4)
+	err = serialize.Deserialize(reader, &val4)
 	if err != nil {
 		t.Fatalf("Error deserializing value 4: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val4)
 
 	var val5 bool
-	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val5)
+	err = serialize.Deserialize(reader, &val5)
 	if err != nil {
 		t.Fatalf("Error deserializing value 5: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val5)
 
 	var val6 float64
-	remaining, err = serialize.Deserialize(bytes.NewReader(remaining), &val6)
+	err = serialize.Deserialize(reader, &val6)
 	if err != nil {
 		t.Fatalf("Error deserializing value 6: %v", err)
 	}
 	deserializedValues = append(deserializedValues, val6)
-
-	// Verify all remaining data was consumed
-	if len(remaining) != 0 {
-		t.Errorf("Expected no remaining bytes after deserialization, got %d", len(remaining))
-	}
 
 	// Verify the values
 	if len(values) != len(deserializedValues) {

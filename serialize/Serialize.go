@@ -10,10 +10,9 @@ import (
 
 // Serialize takes any supported value and serializes it to the writer
 func Serialize(value interface{}, w io.Writer) error {
-	// Handle structs by serializing each exported field in order
-	rv := reflect.ValueOf(value)
 
 	// If the value is a pointer, dereference it
+	rv := reflect.ValueOf(value)
 	if rv.Kind() == reflect.Ptr {
 		if rv.IsNil() {
 			return fmt.Errorf("cannot serialize nil pointer")
@@ -28,40 +27,40 @@ func Serialize(value interface{}, w io.Writer) error {
 		return serializeJson(v, w)
 
 	case uint64:
-		return serializeUint64(v, w)
+		return serializeUint(v, w)
 
 	case uint32:
-		return serializeUint64(uint64(v), w)
+		return serializeUint(uint64(v), w)
 
 	case uint16:
-		return serializeUint64(uint64(v), w)
+		return serializeUint(uint64(v), w)
 
 	case uint8:
-		return serializeUint64(uint64(v), w)
+		return serializeUint(uint64(v), w)
 
 	case uint:
-		return serializeUint64(uint64(v), w)
+		return serializeUint(uint64(v), w)
 
 	case int64:
-		return serializeSint64(v, w)
+		return serializeSint(v, w)
 
 	case int32:
-		return serializeSint64(int64(v), w)
+		return serializeSint(int64(v), w)
 
 	case int16:
-		return serializeSint64(int64(v), w)
+		return serializeSint(int64(v), w)
 
 	case int8:
-		return serializeSint64(int64(v), w)
+		return serializeSint(int64(v), w)
 
 	case int:
-		return serializeSint64(int64(v), w)
+		return serializeSint(int64(v), w)
 
 	case float64:
-		return serializeFloat64(v, w)
+		return serializeFloat(v, w)
 
 	case float32:
-		return serializeFloat32(v, w)
+		return serializeFloat(float64(v), w)
 
 	case bool:
 		return serializeBoolean(v, w)
@@ -76,7 +75,8 @@ func Serialize(value interface{}, w io.Writer) error {
 		return serializeBuffer(v.Bytes(), w)
 
 	default:
-		// Check if it's a struct
+
+		// Handle structs by serializing each exported field in order
 		if rv.Kind() == reflect.Struct {
 			return serializeStruct(value, w)
 		}

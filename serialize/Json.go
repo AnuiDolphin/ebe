@@ -13,7 +13,7 @@ import (
 func serializeJson(jsonMessage json.RawMessage, w io.Writer) error {
 	// Write header with JSON type
 	utils.WriteByte(w, types.CreateHeader(types.Json, 0x00))
-	if err := serializeUint64(uint64(len(jsonMessage)), w); err != nil {
+	if err := serializeUint(uint64(len(jsonMessage)), w); err != nil {
 		return err
 	}
 
@@ -22,40 +22,36 @@ func serializeJson(jsonMessage json.RawMessage, w io.Writer) error {
 	return err
 }
 
-// DeserializeJson deserializes JSON data and unmarshals it into the provided output
-func deserializeJson(data []byte, out interface{}) ([]byte, error) {
-
-	if len(data) == 0 {
-		return data, fmt.Errorf("empty data")
+// DeserializeJson deserializes JSON data from a stream and unmarshals it into the provided output
+func deserializeJson(r io.Reader, out interface{}) error {
+	// Read the header using utils.ReadHeader
+	headerType, _, err := utils.ReadHeader(r)
+	if err != nil {
+		return fmt.Errorf("failed to read JSON header: %w", err)
 	}
 
 	// Verify the header type
-	header := data[0]
-	headerType := types.TypeFromHeader(header)
 	if headerType != types.Json {
-		return data, fmt.Errorf("expected Json type, got %s", types.TypeName(headerType))
+		return fmt.Errorf("expected Json type, got %s", types.TypeName(headerType))
 	}
-	remaining := data[1:]
 
 	// Length always follows as a UInt (no nibble optimization)
-	length, remaining, err := deserializeUint64(remaining)
+	length, err := deserializeUint(r)
 	if err != nil {
-		return remaining, fmt.Errorf("failed to deserialize JSON length: %w", err)
+		return fmt.Errorf("failed to deserialize JSON length: %w", err)
 	}
 
-	// Check if we have enough data
-	if uint64(len(remaining)) < length {
-		return remaining, fmt.Errorf("insufficient data for JSON: expected %d bytes, got %d", length, len(remaining))
+	// Read the JSON bytes
+	jsonBytes := make([]byte, length)
+	_, err = io.ReadFull(r, jsonBytes)
+	if err != nil {
+		return fmt.Errorf("failed to read JSON data: %w", err)
 	}
-
-	// Extract the JSON bytes
-	jsonBytes := remaining[:length]
-	remaining = remaining[length:]
 
 	// Unmarshal the JSON into the output
 	if err := json.Unmarshal(jsonBytes, out); err != nil {
-		return remaining, fmt.Errorf("failed to unmarshal JSON: %w", err)
+		return fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 
-	return remaining, nil
+	return nil
 }

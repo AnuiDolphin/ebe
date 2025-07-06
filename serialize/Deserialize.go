@@ -1,6 +1,7 @@
 package serialize
 
 import (
+	"bytes"
 	"ebe/types"
 	"ebe/utils"
 	"fmt"
@@ -9,37 +10,39 @@ import (
 )
 
 // Deserialize reads the serialized type from the header and deserializes into the provided output parameter
-func Deserialize(r io.Reader, out interface{}) ([]byte, error) {
-	// Read all data from the reader into a byte slice
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
+func Deserialize(r io.Reader, out interface{}) error {
 
 	// Validate and get the output value from within the interface{}
 	outValue, err := getOutputValue(out)
 	if err != nil {
-		return data, err
+		return err
 	}
 
-	// Check the header type first to determine how to deserialize
-	if len(data) > 0 {
-		header := data[0]
-		headerType := types.TypeFromHeader(header)
-
-		// If it's JSON type, use JSON deserialization regardless of output type
-		if headerType == types.Json {
-			return deserializeJson(data, out)
-		}
+	// Check if this is an empty struct first (before reading header)
+	if outValue.Kind() == reflect.Struct && isStructEmpty(outValue) {
+		return nil
 	}
 
-	// Check if we're deserializing into a struct (for non-JSON struct serialization)
+	// Peek at the header type to determine how to deserialize
+	header, err := utils.ReadByte(r)
+	if err != nil {
+		return fmt.Errorf("failed to read header: %w", err)
+	}
+	headerType := types.TypeFromHeader(header)
+	headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+
+	// For JSON, we need to pass the header back into the stream
+	if headerType == types.Json {
+		return deserializeJson(headerReader, out)
+	}
+
+	// For structs, pass the header back into the stream
 	if outValue.Kind() == reflect.Struct {
-		return deserializeStruct(data, outValue)
+		return deserializeStruct(headerReader, outValue)
 	}
 
-	// Deserialize simple types
-	return deserializeSimpleType(data, outValue)
+	// For simple types, pass the header back into the stream
+	return deserializeSimpleType(headerReader, header, outValue)
 }
 
 // getOutputValue validates the output parameter and returns the reflect.Value to set
@@ -64,111 +67,114 @@ func getOutputValue(out interface{}) (reflect.Value, error) {
 	return outValue, nil
 }
 
-// deserializeSimpleType deserializes data into a simple (non-struct) type
-func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) {
+func isStructEmpty(outValue reflect.Value) bool {
 
-	// Make sure there is data to deserialize for simple types
-	if len(data) == 0 {
-		return data, fmt.Errorf("empty data")
+	// Check if the value is a struct and has no exported fields
+	if outValue.Kind() != reflect.Struct {
+		return false
 	}
 
-	header := data[0]
+	// Check if all fields are unexported (private)
+	for i := 0; i < outValue.NumField(); i++ {
+		field := outValue.Type().Field(i)
+		if field.PkgPath == "" { // Exported field
+			return false
+		}
+	}
+	return true
+}
+
+// deserializeSimpleType deserializes data from a stream into a simple (non-struct) type
+func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) error {
 	headerType := types.TypeFromHeader(header)
 
 	switch headerType {
 	case types.UNibble:
-		value, remaining, err := deserializeUNibble(data)
-		if err != nil {
-			return remaining, err
-		}
+		value := types.ValueFromHeader(header)
 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set UNibble value: %w", err)
+			return fmt.Errorf("failed to set UNibble value: %w", err)
 		}
-		return remaining, nil
+		return nil
 
 	case types.SNibble:
-		value, remaining, err := deserializeSNibble(data)
-		if err != nil {
-			return remaining, err
+		var negative = (header & 0x8) != 0
+		var magnitude = header & 0x7
+		value := int8(magnitude)
+		if negative {
+			value = -value
 		}
 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set SNibble value: %w", err)
+			return fmt.Errorf("failed to set SNibble value: %w", err)
 		}
-		return remaining, nil
-
-	case types.UInt:
-		value, remaining, err := deserializeUint64(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set UInt value: %w", err)
-		}
-		return remaining, nil
-
-	case types.SInt:
-		value, remaining, err := deserializeSint64(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set SInt value: %w", err)
-		}
-		return remaining, nil
-
-	case types.Float:
-		value, remaining, err := deserializeFloat64(data)
-		if err != nil {
-			return remaining, err
-		}
-		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set Float value: %w", err)
-		}
-		return remaining, nil
+		return nil
 
 	case types.Boolean:
-		value, remaining, err := deserializeBoolean(data)
+		value, err := deserializeBoolean(r)
 		if err != nil {
-			return remaining, err
+			return err
 		}
 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set Boolean value: %w", err)
+			return fmt.Errorf("failed to set Boolean value: %w", err)
 		}
-		return remaining, nil
+		return nil
+
+	case types.UInt:
+		value, err := deserializeUint(r)
+		if err != nil {
+			return err
+		}
+		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+			return fmt.Errorf("failed to set UInt value: %w", err)
+		}
+		return nil
+
+	case types.SInt:
+		value, err := deserializeSint(r)
+		if err != nil {
+			return err
+		}
+		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+			return fmt.Errorf("failed to set SInt value: %w", err)
+		}
+		return nil
+
+	case types.Float:
+		value, err := deserializeFloat(r)
+		if err != nil {
+			return err
+		}
+		if err := utils.SetValueWithConversion(outValue, value); err != nil {
+			return fmt.Errorf("failed to set Float value: %w", err)
+		}
+		return nil
 
 	case types.String:
-		value, remaining, err := deserializeString(data)
+		value, err := deserializeString(r)
 		if err != nil {
-			return remaining, err
+			return err
 		}
 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set String value: %w", err)
+			return fmt.Errorf("failed to set String value: %w", err)
 		}
-		return remaining, nil
+		return nil
 
 	case types.Buffer:
-		value, remaining, err := deserializeBuffer(data)
+		value, err := deserializeBuffer(r)
 		if err != nil {
-			return remaining, err
+			return err
 		}
 		if err := utils.SetValueWithConversion(outValue, value); err != nil {
-			return remaining, fmt.Errorf("failed to set Buffer value: %w", err)
+			return fmt.Errorf("failed to set Buffer value: %w", err)
 		}
-		return remaining, nil
+		return nil
 
 	case types.Array:
-		// Use the dedicated deserializeArray function with streaming
-		remaining, err := deserializeArray(data, outValue.Addr().Interface())
-		if err != nil {
-			return data, err
+		if err := deserializeArray(r, outValue.Addr().Interface()); err != nil {
+			return err
 		}
-		return remaining, nil
-
-	case types.Json:
-		// Use the dedicated deserializeJson function
-		return deserializeJson(data, outValue.Addr().Interface())
+		return nil
 
 	default:
-		return data, fmt.Errorf("unsupported type: %s", types.TypeName(headerType))
+		return fmt.Errorf("unsupported type: %s", types.TypeName(headerType))
 	}
 }

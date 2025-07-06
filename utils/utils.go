@@ -9,6 +9,45 @@ import (
 	"reflect"
 )
 
+// ReadByte reads a single byte from an io.Reader
+func ReadByte(r io.Reader) (byte, error) {
+	buf := make([]byte, 1)
+	n, err := r.Read(buf)
+	if err != nil {
+		return 0, err
+	}
+	if n != 1 {
+		return 0, fmt.Errorf("expected to read 1 byte, got %d", n)
+	}
+	return buf[0], nil
+}
+
+// ReadHeader reads a header byte from an io.Reader and returns the type and value
+func ReadHeader(r io.Reader) (types.Types, uint8, error) {
+	header, err := ReadByte(r)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read header: %w", err)
+	}
+
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
+
+	return headerType, headerValue, nil
+}
+
+// WriteByte writes a single byte to an io.Writer
+func WriteByte(w io.Writer, b byte) error {
+	buf := []byte{b}
+	n, err := w.Write(buf)
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return fmt.Errorf("expected to write 1 byte, wrote %d", n)
+	}
+	return nil
+}
+
 func Abs(value int64) uint64 {
 	if value < 0 {
 		return uint64(-value)
@@ -305,11 +344,4 @@ func SetValueWithConversion(rhs reflect.Value, lhs interface{}) error {
 	}
 
 	return fmt.Errorf("cannot convert %v to %v", valueType, outType)
-}
-
-// WriteByte writes a single byte to the provided io.Writer.
-func WriteByte(w io.Writer, b byte) error {
-	buf := []byte{b}
-	_, err := w.Write(buf)
-	return err
 }

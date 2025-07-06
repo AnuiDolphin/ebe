@@ -1,7 +1,6 @@
 package serialize
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"reflect"
@@ -33,9 +32,8 @@ func serializeStruct(value interface{}, w io.Writer) error {
 	return nil
 }
 
-// deserializeStruct deserializes data into a struct by deserializing each field in order
-func deserializeStruct(data []byte, structValue reflect.Value) ([]byte, error) {
-	remaining := data
+// deserializeStruct deserializes data from a stream into a struct by deserializing each field in order
+func deserializeStruct(r io.Reader, structValue reflect.Value) error {
 	structType := structValue.Type()
 
 	// Iterate through each field in the struct
@@ -52,13 +50,11 @@ func deserializeStruct(data []byte, structValue reflect.Value) ([]byte, error) {
 		fieldPtr := field.Addr().Interface()
 
 		// Recursively call Deserialize to deserialize into this field
-		newRemaining, err := Deserialize(bytes.NewReader(remaining), fieldPtr)
+		err := Deserialize(r, fieldPtr)
 		if err != nil {
-			return remaining, fmt.Errorf("failed to deserialize field '%s': %w", fieldType.Name, err)
+			return fmt.Errorf("failed to deserialize field '%s': %w", fieldType.Name, err)
 		}
-
-		remaining = newRemaining
 	}
 
-	return remaining, nil
+	return nil
 }

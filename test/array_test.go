@@ -69,13 +69,9 @@ func TestArraySerialization(t *testing.T) {
 			output := reflect.New(outputType).Interface()
 
 			// Deserialize
-			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
+			err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Expected no remaining bytes for %s, got %d", tc.name, len(remaining))
 			}
 
 			// Get the actual value from the pointer
@@ -126,13 +122,9 @@ func TestEmptyArrays(t *testing.T) {
 			outputType := reflect.TypeOf(tc.expected)
 			output := reflect.New(outputType).Interface()
 
-			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
+			err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Expected no remaining bytes for %s, got %d", tc.name, len(remaining))
 			}
 
 			actualValue := reflect.ValueOf(output).Elem().Interface()
@@ -186,13 +178,9 @@ func TestLargeArrays(t *testing.T) {
 			outputType := reflect.TypeOf(tc.expected)
 			output := reflect.New(outputType).Interface()
 
-			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
+			err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Expected no remaining bytes for %s, got %d", tc.name, len(remaining))
 			}
 
 			actualValue := reflect.ValueOf(output).Elem().Interface()
@@ -243,13 +231,9 @@ func TestArrayWithSpecialValues(t *testing.T) {
 			outputType := reflect.TypeOf(tc.expected)
 			output := reflect.New(outputType).Interface()
 
-			remaining, err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
+			err := serialize.Deserialize(bytes.NewReader(buf.Bytes()), output)
 			if err != nil {
 				t.Fatalf("Error deserializing %s: %v", tc.name, err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Expected no remaining bytes for %s, got %d", tc.name, len(remaining))
 			}
 
 			actualValue := reflect.ValueOf(output).Elem().Interface()
@@ -284,7 +268,7 @@ func TestArrayDeserializationErrors(t *testing.T) {
 		data := []byte{0x60, 0x02, 0x03} // Wrong type (6 = Boolean, should be 9 = Array)
 		var out []int
 
-		_, err := serialize.Deserialize(bytes.NewReader(data), &out)
+		err := serialize.Deserialize(bytes.NewReader(data), &out)
 		if err == nil {
 			t.Error("Expected error when deserializing corrupted array header, got nil")
 		}
@@ -295,7 +279,7 @@ func TestArrayDeserializationErrors(t *testing.T) {
 		data := []byte{0x92, 0x02} // Array header (9 = Array, 2 = length), element type (2 = SInt), but no elements
 		var out []int
 
-		_, err := serialize.Deserialize(bytes.NewReader(data), &out)
+		err := serialize.Deserialize(bytes.NewReader(data), &out)
 		if err == nil {
 			t.Error("Expected error when deserializing incomplete array data, got nil")
 		}
@@ -305,7 +289,7 @@ func TestArrayDeserializationErrors(t *testing.T) {
 		data := []byte{0x91, 0x02, 0x01} // Valid array data
 		var out []int
 
-		_, err := serialize.Deserialize(bytes.NewReader(data), out) // Not a pointer
+		err := serialize.Deserialize(bytes.NewReader(data), out) // Not a pointer
 		if err == nil {
 			t.Error("Expected error when deserializing to non-pointer, got nil")
 		}
@@ -315,7 +299,7 @@ func TestArrayDeserializationErrors(t *testing.T) {
 		data := []byte{0x91, 0x02, 0x01} // Valid array data
 		var out int
 
-		_, err := serialize.Deserialize(bytes.NewReader(data), &out) // Pointer to int, not array/slice
+		err := serialize.Deserialize(bytes.NewReader(data), &out) // Pointer to int, not array/slice
 		if err == nil {
 			t.Error("Expected error when deserializing to non-array/slice type, got nil")
 		}

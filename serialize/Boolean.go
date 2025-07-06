@@ -2,6 +2,7 @@ package serialize
 
 import (
 	"ebe/types"
+	"ebe/utils"
 	"fmt"
 	"io"
 )
@@ -15,25 +16,19 @@ func serializeBoolean(value bool, w io.Writer) error {
 	} else {
 		b = types.CreateHeader(types.Boolean, 0)
 	}
-	_, err := w.Write([]byte{b})
-	return err
+	return utils.WriteByte(w, b)
 }
 
-func deserializeBoolean(data []byte) (bool, []byte, error) {
-
-	if len(data) == 0 {
-		return false, data, fmt.Errorf("no data to deserialize")
+func deserializeBoolean(r io.Reader) (bool, error) {
+	// Read the header using utils.ReadHeader
+	headerType, headerValue, err := utils.ReadHeader(r)
+	if err != nil {
+		return false, fmt.Errorf("failed to read boolean header: %w", err)
 	}
-
-	var header = data[0]
-	data = data[1:]
-
-	var headerType = types.TypeFromHeader(header)
 
 	if headerType != types.Boolean {
-		return false, data, fmt.Errorf("expected Boolean type, got %v", headerType)
+		return false, fmt.Errorf("expected Boolean type, got %v", headerType)
 	}
 
-	var value = types.ValueFromHeader(header)
-	return value != 0, data, nil
+	return headerValue != 0, nil
 }

@@ -99,13 +99,9 @@ func TestJsonSerializeDeserialize(t *testing.T) {
 			}
 
 			// Deserialize using our library
-			remaining, err := serialize.Deserialize(bytes.NewReader(serializedData), result)
+			err = serialize.Deserialize(bytes.NewReader(serializedData), result)
 			if err != nil {
 				t.Fatalf("Deserialize failed: %v", err)
-			}
-
-			if len(remaining) != 0 {
-				t.Errorf("Deserialize left %d bytes remaining", len(remaining))
 			}
 
 			// Compare the results by marshaling both to JSON and comparing
@@ -160,13 +156,9 @@ func TestJsonIntegrationWithSerialize(t *testing.T) {
 
 	// Deserialize using main Deserialize function (should auto-detect JSON type)
 	var result Person
-	remaining, err := serialize.Deserialize(bytes.NewReader(buffer.Bytes()), &result)
+	err = serialize.Deserialize(bytes.NewReader(buffer.Bytes()), &result)
 	if err != nil {
 		t.Fatalf("Deserialize failed: %v", err)
-	}
-
-	if len(remaining) != 0 {
-		t.Errorf("Deserialize left %d bytes remaining", len(remaining))
 	}
 
 	if result.Name != person.Name || result.Age != person.Age {
@@ -204,14 +196,14 @@ func TestJsonVsRegularSerialization(t *testing.T) {
 
 	// Struct should deserialize with regular Deserialize
 	var structResult Person
-	_, err = serialize.Deserialize(bytes.NewReader(structBuffer.Bytes()), &structResult)
+	err = serialize.Deserialize(bytes.NewReader(structBuffer.Bytes()), &structResult)
 	if err != nil {
 		t.Fatalf("Struct deserialize failed: %v", err)
 	}
 
 	// JSON should deserialize with main Deserialize (auto-detects JSON type)
 	var jsonResult Person
-	_, err = serialize.Deserialize(bytes.NewReader(jsonBuffer.Bytes()), &jsonResult)
+	err = serialize.Deserialize(bytes.NewReader(jsonBuffer.Bytes()), &jsonResult)
 	if err != nil {
 		t.Fatalf("JSON deserialize failed: %v", err)
 	}

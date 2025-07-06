@@ -1,7 +1,6 @@
 package serialize
 
 import (
-	"bytes"
 	"ebe/types"
 	"ebe/utils"
 	"fmt"
@@ -9,126 +8,7 @@ import (
 	"math"
 )
 
-func deserializeUNibble(data []byte) (uint8, []byte, error) {
-
-	if len(data) == 0 {
-		return 0, data, fmt.Errorf("no data to deserialize")
-	}
-
-	var header = data[0]
-	var headerType = types.TypeFromHeader(header)
-	var length = types.ValueFromHeader(header)
-	data = data[1:]
-
-	// If the header is a UNibble, we can return the value directly
-	if headerType != types.UNibble {
-		return 0, data, fmt.Errorf("expected UNibble type, got %v", types.TypeNameFromHeader(header))
-	}
-
-	// For UNibble, the value is stored directly in the header (no negative values)
-	return uint8(length), data, nil
-}
-
-func deserializeUint8(data []byte) (uint8, []byte, error) {
-	value, remainingData, err := deserializeUint64(data)
-	if err != nil {
-		return 0, remainingData, err
-	}
-	if value > math.MaxUint8 {
-		return 0, remainingData, fmt.Errorf("value %d does not fit in uint8 range [0, %d]", value, math.MaxUint8)
-	}
-	return uint8(value), remainingData, nil
-}
-
-func deserializeUint16(data []byte) (uint16, []byte, error) {
-	value, remainingData, err := deserializeUint64(data)
-	if err != nil {
-		return 0, remainingData, err
-	}
-	if value > math.MaxUint16 {
-		return 0, remainingData, fmt.Errorf("value %d does not fit in uint16 range [0, %d]", value, math.MaxUint16)
-	}
-	return uint16(value), remainingData, nil
-}
-
-func deserializeUint32(data []byte) (uint32, []byte, error) {
-	value, remainingData, err := deserializeUint64(data)
-	if err != nil {
-		return 0, remainingData, err
-	}
-	if value > math.MaxUint32 {
-		return 0, remainingData, fmt.Errorf("value %d does not fit in uint32 range [0, %d]", value, math.MaxUint32)
-	}
-	return uint32(value), remainingData, nil
-}
-
-func deserializeUint64(data []byte) (uint64, []byte, error) {
-
-	if len(data) == 0 {
-		return 0, data, fmt.Errorf("no data to deserialize")
-	}
-
-	var header = data[0]
-	var headerType = types.TypeFromHeader(header)
-	var length = types.ValueFromHeader(header)
-	data = data[1:]
-
-	if len(data) == 0 {
-		return 0, data, fmt.Errorf("no data to deserialize")
-	}
-
-	// For UNibble, the value is stored directly in the header (no negative values)
-	if headerType == types.UNibble {
-		return uint64(length), data, nil
-	}
-
-	// Make sure the data is a valid integer value
-	if headerType != types.UInt {
-		return 0, data, fmt.Errorf("expected UInt type, got %v", headerType)
-	}
-
-	if len(data) < int(length) {
-		return 0, data, fmt.Errorf("insufficient data: need %d bytes, got %d", length, len(data))
-	}
-
-	var value uint64 = 0
-	for i := 0; i < int(length); i++ {
-		var dataByte = data[i]
-		value = value << 8
-		value = value | uint64(dataByte)
-	}
-	data = data[length:]
-
-	return value, data, nil
-}
-
-func deserializeUint(data []byte) (uint64, []byte, error) {
-	return deserializeUint64(data)
-}
-
-//
-// Serialization functions
-// These functions serialize unsigned integers into a byte buffer.
-// All methods write to the writer.
-//
-
-func serializeUint8(value uint8, writer io.Writer) error {
-	// Serialize uint8 as uint64
-	return serializeUint64(uint64(value), writer)
-}
-
-func serializeUint16(value uint16, writer io.Writer) error {
-	// Serialize uint16 as uint64
-	return serializeUint64(uint64(value), writer)
-}
-
-func serializeUint32(value uint32, writer io.Writer) error {
-	// Serialize uint32 as uint64
-	return serializeUint64(uint64(value), writer)
-}
-
-func serializeUint64(value uint64, writer io.Writer) error {
-	// This function writes the serialized unsigned integer to the writer
+func serializeUint(value uint64, writer io.Writer) error {
 
 	// Figure out what size of integer is needed for the data
 	var length uint8 = 0
@@ -187,20 +67,39 @@ func serializeUint64(value uint64, writer io.Writer) error {
 	return nil
 }
 
-// Wrapper functions that preserve the *bytes.Buffer interface for backward compatibility
+func deserializeUint(r io.Reader) (uint64, error) {
 
-func SerializeUint8Buffer(value uint8, data *bytes.Buffer) error {
-	return serializeUint8(value, data)
-}
+	// Read the header using utils.ReadHeader
+	headerType, headerValue, err := utils.ReadHeader(r)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read UInt64 header: %w", err)
+	}
 
-func SerializeUint16Buffer(value uint16, data *bytes.Buffer) error {
-	return serializeUint16(value, data)
-}
+	length := headerValue
 
-func SerializeUint32Buffer(value uint32, data *bytes.Buffer) error {
-	return serializeUint32(value, data)
-}
+	// For UNibble, the value is stored directly in the header (no negative values)
+	if headerType == types.UNibble {
+		return uint64(length), nil
+	}
 
-func SerializeUint64Buffer(value uint64, data *bytes.Buffer) error {
-	return serializeUint64(value, data)
+	// Make sure the data is a valid integer value
+	if headerType != types.UInt {
+		return 0, fmt.Errorf("expected UInt type, got %v", headerType)
+	}
+
+	// Read the data bytes
+	data := make([]byte, length)
+	_, err = io.ReadFull(r, data)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read UInt64 data: %w", err)
+	}
+
+	var value uint64 = 0
+	for i := 0; i < int(length); i++ {
+		var dataByte = data[i]
+		value = value << 8
+		value = value | uint64(dataByte)
+	}
+
+	return value, nil
 }

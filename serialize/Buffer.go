@@ -21,7 +21,7 @@ func serializeBuffer(value []byte, w io.Writer) error {
 		utils.WriteByte(w, types.CreateHeader(types.Buffer, byte(length)))
 	} else {
 		utils.WriteByte(w, types.CreateHeader(types.Buffer, 0x08))
-		if err := serializeUint64(uint64(length), w); err != nil {
+		if err := serializeUint(uint64(length), w); err != nil {
 			return err
 		}
 	}
@@ -31,40 +31,36 @@ func serializeBuffer(value []byte, w io.Writer) error {
 	return err
 }
 
-func deserializeBuffer(data []byte) (*bytes.Buffer, []byte, error) {
+func deserializeBuffer(r io.Reader) (*bytes.Buffer, error) {
+	value := new(bytes.Buffer)
 
-	if len(data) == 0 {
-		return new(bytes.Buffer), data, fmt.Errorf("no data to deserialize")
+	headerType, headerValue, err := utils.ReadHeader(r)
+	if err != nil {
+		return value, fmt.Errorf("failed to read buffer header: %w", err)
 	}
-
-	var header = data[0]
-	data = data[1:]
-
-	var headerType = types.TypeFromHeader(header)
-	var value = new(bytes.Buffer)
 
 	if headerType != types.Buffer {
-		return value, data, fmt.Errorf("expected Buffer type, got %v", headerType)
+		return value, fmt.Errorf("expected Buffer type, got %v", headerType)
 	}
 
-	var length = uint64(types.ValueFromHeader(header))
+	length := uint64(headerValue)
 
-	// If the 4th bit of the nibble is not set then this is a special cased buffer whose length fits in the length nibble
-	// Otherwise get the buffer length from integer in the next data type
-	if length == 8 {
-		var err error
-		length, data, err = deserializeUint(data[0:])
+	// If the high bit of the length is set, then the length is in the next data type
+	if length&0x08 != 0 {
+
+		l, err := deserializeUint(r)
 		if err != nil {
-			return value, data, fmt.Errorf("failed to deserialize buffer length: %w", err)
+			return value, fmt.Errorf("failed to read buffer length: %w", err)
 		}
+		length = l
 	}
 
-	if len(data) < int(length) {
-		return value, data, fmt.Errorf("insufficient data: need %d bytes, got %d", length, len(data))
+	// Read the buffer data
+	data := make([]byte, length)
+	_, err = io.ReadFull(r, data)
+	if err != nil {
+		return value, fmt.Errorf("failed to read buffer data: %w", err)
 	}
-
-	value.Write(data[0:length])
-	data = data[length:]
-
-	return value, data, nil
+	value.Write(data)
+	return value, nil
 }
