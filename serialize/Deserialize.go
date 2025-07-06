@@ -171,6 +171,10 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		}
 		return remaining, nil
 
+	case types.Array:
+		// Use the dedicated DeserializeArray function
+		return DeserializeArray(data, outValue.Addr().Interface())
+
 	default:
 		return data, fmt.Errorf("unsupported type: %s", types.TypeName(headerType))
 	}

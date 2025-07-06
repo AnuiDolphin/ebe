@@ -19,6 +19,7 @@ func Serialize(value interface{}, data *bytes.Buffer) error {
 			return fmt.Errorf("cannot serialize nil pointer")
 		}
 		rv = rv.Elem()
+		value = rv.Interface() // Update value to the dereferenced value
 	}
 
 	// If the value is a struct, serialize each exported field
@@ -91,6 +92,12 @@ func Serialize(value interface{}, data *bytes.Buffer) error {
 		SerializeBuffer(v.Bytes(), data)
 
 	default:
+		// Check if it's an array or slice
+		rv := reflect.ValueOf(value)
+		if rv.Kind() == reflect.Array || rv.Kind() == reflect.Slice {
+			return SerializeArray(value, data)
+		}
+
 		return fmt.Errorf("unsupported type for serialization: %T", value)
 	}
 	return nil

@@ -207,6 +207,35 @@ func PrintSerializedData(data []byte) {
 				// Length stored in header
 				bytesToSkip = int(headerValue)
 			}
+
+		case types.Array:
+			// Array format: header, [length if > 7], element_type, then elements
+			var arrayLength uint64 = uint64(headerValue)
+			elementTypeBytes := 1 // Always 1 byte for element type
+
+			if headerValue&0x08 != 0 {
+				// Length stored as separate UInt - need to parse it
+				if len(remaining) > 0 {
+					lengthHeader := remaining[0]
+					lengthBytes := int(types.ValueFromHeader(lengthHeader))
+					if len(remaining) >= 1+lengthBytes {
+						// Parse the actual length
+						arrayLength = 0
+						for i := 1; i <= lengthBytes; i++ {
+							arrayLength |= uint64(remaining[i]) << (8 * (lengthBytes - (i - 1) - 1))
+						}
+						elementTypeBytes += 1 + lengthBytes
+						fmt.Printf(", Length bytes: %d, Array length: %d", lengthBytes, arrayLength)
+					}
+				}
+			}
+
+			// For arrays, we just skip the element type byte and let the elements be parsed individually
+			bytesToSkip = elementTypeBytes
+			if len(remaining) >= elementTypeBytes {
+				elementType := types.Types(remaining[elementTypeBytes-1])
+				fmt.Printf(", Element type: %s", types.TypeName(elementType))
+			}
 		default:
 			// Unknown type, skip 1 byte and continue
 			bytesToSkip = 1
