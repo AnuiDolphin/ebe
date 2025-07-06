@@ -16,279 +16,6 @@ func Abs(value int64) uint64 {
 	}
 }
 
-// convertToMatchingType converts value b to match the type of value a
-func ConvertToMatchingType(a, b interface{}) (interface{}, error) {
-	if a == nil {
-		return nil, fmt.Errorf("cannot determine target type from nil value")
-	}
-
-	// Get the target type from a
-	targetType := reflect.TypeOf(a)
-
-	// If b is nil, return nil
-	if b == nil {
-		return nil, fmt.Errorf("cannot convert nil value")
-	}
-
-	// If types are already the same, return b as-is
-	if reflect.TypeOf(b) == targetType {
-		return b, nil
-	}
-
-	// Handle conversions based on target type
-	switch targetType.Kind() {
-	case reflect.Uint64:
-		val, err := ToUint64(b)
-		if err != nil {
-			return nil, err
-		}
-		return val, nil
-
-	case reflect.Uint32:
-		val, err := ToUint64(b)
-		if err != nil {
-			return nil, err
-		}
-		if val > math.MaxUint32 {
-			return nil, fmt.Errorf("value %d exceeds uint32 range", val)
-		}
-		return uint32(val), nil
-
-	case reflect.Uint16:
-		val, err := ToUint64(b)
-		if err != nil {
-			return nil, err
-		}
-		if val > math.MaxUint16 {
-			return nil, fmt.Errorf("value %d exceeds uint16 range", val)
-		}
-		return uint16(val), nil
-
-	case reflect.Uint8:
-		val, err := ToUint64(b)
-		if err != nil {
-			return nil, err
-		}
-		if val > math.MaxUint8 {
-			return nil, fmt.Errorf("value %d exceeds uint8 range", val)
-		}
-		return uint8(val), nil
-
-	case reflect.Uint:
-		val, err := ToUint64(b)
-		if err != nil {
-			return nil, err
-		}
-		return uint(val), nil
-
-	case reflect.Int64:
-		val, err := ToSint64(b)
-		if err != nil {
-			return nil, err
-		}
-		return val, nil
-
-	case reflect.Int32:
-		val, err := ToSint64(b)
-		if err != nil {
-			return nil, err
-		}
-		if val < math.MinInt32 || val > math.MaxInt32 {
-			return nil, fmt.Errorf("value %d exceeds int32 range", val)
-		}
-		return int32(val), nil
-
-	case reflect.Int16:
-		val, err := ToSint64(b)
-		if err != nil {
-			return nil, err
-		}
-		if val < math.MinInt16 || val > math.MaxInt16 {
-			return nil, fmt.Errorf("value %d exceeds int16 range", val)
-		}
-		return int16(val), nil
-
-	case reflect.Int8:
-		val, err := ToSint64(b)
-		if err != nil {
-			return nil, err
-		}
-		if val < math.MinInt8 || val > math.MaxInt8 {
-			return nil, fmt.Errorf("value %d exceeds int8 range", val)
-		}
-		return int8(val), nil
-
-	case reflect.Int:
-		val, err := ToSint64(b)
-		if err != nil {
-			return nil, err
-		}
-		return int(val), nil
-
-	case reflect.Float64:
-		switch v := b.(type) {
-		case float64:
-			return v, nil
-		case float32:
-			return float64(v), nil
-		case uint64, uint32, uint16, uint8, uint:
-			uval, err := ToUint64(b)
-			if err != nil {
-				return nil, err
-			}
-			return float64(uval), nil
-		case int64, int32, int16, int8, int:
-			ival, err := ToSint64(b)
-			if err != nil {
-				return nil, err
-			}
-			return float64(ival), nil
-		default:
-			return nil, fmt.Errorf("cannot convert %T to float64", b)
-		}
-
-	case reflect.Float32:
-		switch v := b.(type) {
-		case float32:
-			return v, nil
-		case float64:
-			if v > math.MaxFloat32 || v < -math.MaxFloat32 {
-				return nil, fmt.Errorf("value %f exceeds float32 range", v)
-			}
-			return float32(v), nil
-		case uint64, uint32, uint16, uint8, uint:
-			uval, err := ToUint64(b)
-			if err != nil {
-				return nil, err
-			}
-			return float32(uval), nil
-		case int64, int32, int16, int8, int:
-			ival, err := ToSint64(b)
-			if err != nil {
-				return nil, err
-			}
-			return float32(ival), nil
-		default:
-			return nil, fmt.Errorf("cannot convert %T to float32", b)
-		}
-
-	case reflect.String:
-		if str, ok := b.(string); ok {
-			return str, nil
-		}
-		return nil, fmt.Errorf("cannot convert %T to string", b)
-
-	case reflect.Bool:
-		if boolean, ok := b.(bool); ok {
-			return boolean, nil
-		}
-		return nil, fmt.Errorf("cannot convert %T to bool", b)
-
-	case reflect.Slice:
-		if targetType.Elem().Kind() == reflect.Uint8 { // []byte
-			if slice, ok := b.([]byte); ok {
-				return slice, nil
-			}
-			if buffer, ok := b.(*bytes.Buffer); ok {
-				return buffer.Bytes(), nil
-			}
-		}
-		return nil, fmt.Errorf("cannot convert %T to %v", b, targetType)
-
-	case reflect.Ptr:
-		if targetType == reflect.TypeOf((*bytes.Buffer)(nil)) {
-			if buffer, ok := b.(*bytes.Buffer); ok {
-				return buffer, nil
-			}
-			if slice, ok := b.([]byte); ok {
-				buf := bytes.NewBuffer(slice)
-				return buf, nil
-			}
-		}
-		return nil, fmt.Errorf("cannot convert %T to %v", b, targetType)
-
-	default:
-		return nil, fmt.Errorf("unsupported target type: %v", targetType)
-	}
-}
-
-// Helper function to convert interface{} to uint64
-func ToUint64(v interface{}) (uint64, error) {
-	switch val := v.(type) {
-	case uint64:
-		return val, nil
-	case uint32:
-		return uint64(val), nil
-	case uint16:
-		return uint64(val), nil
-	case uint8:
-		return uint64(val), nil
-	case uint:
-		return uint64(val), nil
-	case int64:
-		if val < 0 {
-			return 0, fmt.Errorf("cannot convert negative value %d to uint64", val)
-		}
-		return uint64(val), nil
-	case int32:
-		if val < 0 {
-			return 0, fmt.Errorf("cannot convert negative value %d to uint64", val)
-		}
-		return uint64(val), nil
-	case int16:
-		if val < 0 {
-			return 0, fmt.Errorf("cannot convert negative value %d to uint64", val)
-		}
-		return uint64(val), nil
-	case int8:
-		if val < 0 {
-			return 0, fmt.Errorf("cannot convert negative value %d to uint64", val)
-		}
-		return uint64(val), nil
-	case int:
-		if val < 0 {
-			return 0, fmt.Errorf("cannot convert negative value %d to uint64", val)
-		}
-		return uint64(val), nil
-	default:
-		return 0, fmt.Errorf("cannot convert %T to uint64", v)
-	}
-}
-
-// Helper function to convert interface{} to int64
-func ToSint64(v interface{}) (int64, error) {
-	switch val := v.(type) {
-	case int64:
-		return val, nil
-	case int32:
-		return int64(val), nil
-	case int16:
-		return int64(val), nil
-	case int8:
-		return int64(val), nil
-	case int:
-		return int64(val), nil
-	case uint64:
-		if val > math.MaxInt64 {
-			return 0, fmt.Errorf("value %d exceeds int64 range", val)
-		}
-		return int64(val), nil
-	case uint32:
-		return int64(val), nil
-	case uint16:
-		return int64(val), nil
-	case uint8:
-		return int64(val), nil
-	case uint:
-		if uint64(val) > math.MaxInt64 {
-			return 0, fmt.Errorf("value %d exceeds int64 range", val)
-		}
-		return int64(val), nil
-	default:
-		return 0, fmt.Errorf("cannot convert %T to int64", v)
-	}
-}
-
 // Helper function to check if two values are equivalent, handling type conversions
 func CompareValue(a, b interface{}) bool {
 
@@ -297,15 +24,124 @@ func CompareValue(a, b interface{}) bool {
 		return false
 	}
 
-	// Try to convert b to match the type of a
-	converted, err := ConvertToMatchingType(a, b)
-	if err != nil {
-		// If conversion fails, fall back to reflect.DeepEqual
+	// Special case: compare []byte with *bytes.Buffer
+	if aBytes, ok := a.([]byte); ok {
+		if bBuffer, ok := b.(*bytes.Buffer); ok {
+			bBytes := bBuffer.Bytes()
+			// Handle nil vs empty slice comparison
+			if len(aBytes) == 0 && len(bBytes) == 0 {
+				return true
+			}
+			return bytes.Equal(aBytes, bBytes)
+		}
+	}
+	if aBuffer, ok := a.(*bytes.Buffer); ok {
+		if bBytes, ok := b.([]byte); ok {
+			aBytes := aBuffer.Bytes()
+			// Handle nil vs empty slice comparison
+			if len(aBytes) == 0 && len(bBytes) == 0 {
+				return true
+			}
+			return bytes.Equal(aBytes, bBytes)
+		}
+	}
+
+	// Try to convert b to the type of a
+	aValue := reflect.ValueOf(a)
+	bValue := reflect.ValueOf(b)
+	aType := aValue.Type()
+	bType := bValue.Type()
+
+	// If types are already the same, use special handling for floats or DeepEqual
+	if aType == bType {
+		// Special case: handle nil vs empty slice for []byte
+		if aType == reflect.TypeOf([]byte{}) {
+			aBytes := a.([]byte)
+			bBytes := b.([]byte)
+			if len(aBytes) == 0 && len(bBytes) == 0 {
+				return true
+			}
+		}
+		// Special handling for floating-point numbers
+		if aType.Kind() == reflect.Float32 || aType.Kind() == reflect.Float64 {
+			return compareFloats(a, b)
+		}
 		return reflect.DeepEqual(a, b)
 	}
 
-	// Compare the original value with the converted value
-	return reflect.DeepEqual(a, converted)
+	// Try to convert b to the type of a
+	if bType.ConvertibleTo(aType) {
+		convertedB := bValue.Convert(aType).Interface()
+		// Special handling for floating-point numbers after conversion
+		if aType.Kind() == reflect.Float32 || aType.Kind() == reflect.Float64 {
+			return compareFloats(a, convertedB)
+		}
+		return reflect.DeepEqual(a, convertedB)
+	}
+
+	// If conversion is not possible, fall back to reflect.DeepEqual
+	return reflect.DeepEqual(a, b)
+}
+
+// Helper function to compare floating-point numbers with tolerance and special value handling
+func compareFloats(a, b interface{}) bool {
+	const tolerance = 1e-6 // More generous tolerance for float32 precision
+
+	aVal := reflect.ValueOf(a)
+	bVal := reflect.ValueOf(b)
+
+	var aFloat, bFloat float64
+
+	switch aVal.Kind() {
+	case reflect.Float32:
+		aFloat = float64(aVal.Float())
+	case reflect.Float64:
+		aFloat = aVal.Float()
+	default:
+		return false
+	}
+
+	switch bVal.Kind() {
+	case reflect.Float32:
+		bFloat = float64(bVal.Float())
+	case reflect.Float64:
+		bFloat = bVal.Float()
+	default:
+		return false
+	}
+
+	// Handle special float values first
+	// NaN comparison - both must be NaN
+	if math.IsNaN(aFloat) && math.IsNaN(bFloat) {
+		return true
+	}
+	if math.IsNaN(aFloat) || math.IsNaN(bFloat) {
+		return false // Only one is NaN
+	}
+
+	// Positive infinity comparison
+	if math.IsInf(aFloat, 1) && math.IsInf(bFloat, 1) {
+		return true
+	}
+	if math.IsInf(aFloat, 1) || math.IsInf(bFloat, 1) {
+		return false // Only one is positive infinity
+	}
+
+	// Negative infinity comparison
+	if math.IsInf(aFloat, -1) && math.IsInf(bFloat, -1) {
+		return true
+	}
+	if math.IsInf(aFloat, -1) || math.IsInf(bFloat, -1) {
+		return false // Only one is negative infinity
+	}
+
+	// Regular float comparison with tolerance
+	diff := aFloat - bFloat
+	if diff < 0 {
+		diff = -diff
+	}
+
+	return diff < tolerance
 }
 
 // PrintSerializedData takes a byte array and prints out each serialized type and value
@@ -346,11 +182,11 @@ func PrintSerializedData(data []byte) {
 
 		case types.String, types.Buffer:
 
-			if headerValue & 0x08 != 0 {
+			if headerValue&0x08 != 0 {
 
 				// Length stored as separate UInt - need to parse it
 				if len(remaining) > 0 {
-					
+
 					lengthHeader := remaining[0]
 					lengthBytes := int(types.ValueFromHeader(lengthHeader))
 					if len(remaining) >= 1+lengthBytes {
@@ -398,4 +234,45 @@ func PrintSerializedData(data []byte) {
 	}
 
 	fmt.Printf("Parsed %d values total\n", valueIndex)
+}
+
+// SetValueWithConversion sets a reflect.Value with type conversion support
+func SetValueWithConversion(rhs reflect.Value, lhs interface{}) error {
+	valueReflect := reflect.ValueOf(lhs)
+	outType := rhs.Type()
+	valueType := valueReflect.Type()
+
+	// Special case: convert *bytes.Buffer to []byte
+	if outType == reflect.TypeOf([]byte{}) && valueType == reflect.TypeOf(&bytes.Buffer{}) {
+		buffer := lhs.(*bytes.Buffer)
+		bufBytes := buffer.Bytes()
+		// Ensure we always return a non-nil slice, even if empty
+		if bufBytes == nil {
+			bufBytes = []byte{}
+		}
+		rhs.Set(reflect.ValueOf(bufBytes))
+		return nil
+	}
+
+	// Special case: convert []byte to *bytes.Buffer
+	if outType == reflect.TypeOf(&bytes.Buffer{}) && valueType == reflect.TypeOf([]byte{}) {
+		byteSlice := lhs.([]byte)
+		buffer := bytes.NewBuffer(byteSlice)
+		rhs.Set(reflect.ValueOf(buffer))
+		return nil
+	}
+
+	// Direct assignment if types match
+	if valueType.AssignableTo(outType) {
+		rhs.Set(valueReflect)
+		return nil
+	}
+
+	// Type conversion if possible
+	if valueType.ConvertibleTo(outType) {
+		rhs.Set(valueReflect.Convert(outType))
+		return nil
+	}
+
+	return fmt.Errorf("cannot convert %v to %v", valueType, outType)
 }

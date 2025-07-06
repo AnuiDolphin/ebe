@@ -3,11 +3,41 @@ package serialize
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 )
 
 // Serialize takes any supported value and serializes it to the buffer
 // This function appends the serialized value to the existing buffer
 func Serialize(value interface{}, data *bytes.Buffer) error {
+
+	// Handle structs by serializing each exported field in order
+	rv := reflect.ValueOf(value)
+
+	// If the value is a pointer, dereference it
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return fmt.Errorf("cannot serialize nil pointer")
+		}
+		rv = rv.Elem()
+	}
+
+	// If the value is a struct, serialize each exported field
+	// Unexported fields are skipped
+	if rv.Kind() == reflect.Struct {
+
+		for i := 0; i < rv.NumField(); i++ {
+			field := rv.Type().Field(i)
+			if field.PkgPath != "" { // unexported field
+				continue
+			}
+
+			// Recursively call Serialize to serialize the field value
+			if err := Serialize(rv.Field(i).Interface(), data); err != nil {
+				return fmt.Errorf("error serializing field %s: %w", field.Name, err)
+			}
+		}
+		return nil
+	}
 
 	switch v := value.(type) {
 
@@ -62,17 +92,6 @@ func Serialize(value interface{}, data *bytes.Buffer) error {
 
 	default:
 		return fmt.Errorf("unsupported type for serialization: %T", value)
-	}
-	return nil
-}
-
-// SerializeAll serializes multiple values into a single buffer
-// This function appends all serialized values to the existing buffer
-func SerializeAll(values []interface{}, data *bytes.Buffer) error {
-	for i, value := range values {
-		if err := Serialize(value, data); err != nil {
-			return fmt.Errorf("error serializing value at index %d: %w", i, err)
-		}
 	}
 	return nil
 }

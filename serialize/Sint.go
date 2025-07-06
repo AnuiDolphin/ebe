@@ -160,21 +160,17 @@ func SerializeSint64(value int64, data *bytes.Buffer) {
 	var length uint8 = 0
 	switch {
 
-	case v <= 0xf:
+	case v <= 0x07:
 		// For SNibble, we encode sign in bit 3 and magnitude in bits 0-2
 		// This gives us range -7 to +7 (magnitude 0-7)
 		var nibble byte
-		if v > 7 {
-			// Value too large for SNibble, fall through to regular SInt encoding
+		if negative {
+			nibble = 0x8 | byte(v) // Set bit 3 for negative, store magnitude in bits 0-2
 		} else {
-			if negative {
-				nibble = 0x8 | byte(v) // Set bit 3 for negative, store magnitude in bits 0-2
-			} else {
-				nibble = byte(v) // Just use the magnitude for positive values
-			}
-			data.WriteByte(types.CreateHeader(types.SNibble, nibble))
-			return
+			nibble = byte(v) // Just use the magnitude for positive values
 		}
+		data.WriteByte(types.CreateHeader(types.SNibble, nibble))
+		return
 
 	case v <= 0x7f:
 		length = 1
