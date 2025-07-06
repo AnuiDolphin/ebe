@@ -2,6 +2,7 @@ package serialize
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -24,42 +25,44 @@ func Serialize(value interface{}, data *bytes.Buffer) error {
 
 	switch v := value.(type) {
 
-	case uint64, uint32, uint16, uint8, uint:
-		switch uv := v.(type) {
-		case uint64:
-			SerializeUint64(uv, data)
-		case uint32:
-			SerializeUint64(uint64(uv), data)
-		case uint16:
-			SerializeUint64(uint64(uv), data)
-		case uint8:
-			SerializeUint64(uint64(uv), data)
-		case uint:
-			SerializeUint64(uint64(uv), data)
-		}
+	case json.RawMessage:
+		return SerializeJson(v, data)
 
-	case int64, int32, int16, int8, int:
-		switch iv := v.(type) {
-		case int64:
-			SerializeSint64(iv, data)
-		case int32:
-			SerializeSint64(int64(iv), data)
-		case int16:
-			SerializeSint64(int64(iv), data)
-		case int8:
-			SerializeSint64(int64(iv), data)
-		case int:
-			SerializeSint64(int64(iv), data)
-		}
+	case uint64:
+		SerializeUint64(v, data)
 
-	case float64, float32:
-		// Use type-specific serialize methods
-		switch fv := v.(type) {
-		case float32:
-			SerializeFloat32(fv, data)
-		case float64:
-			SerializeFloat64(fv, data)
-		}
+	case uint32:
+		SerializeUint64(uint64(v), data)
+
+	case uint16:
+		SerializeUint64(uint64(v), data)
+
+	case uint8:
+		SerializeUint64(uint64(v), data)
+
+	case uint:
+		SerializeUint64(uint64(v), data)
+
+	case int64:
+		SerializeSint64(v, data)
+
+	case int32:
+		SerializeSint64(int64(v), data)
+
+	case int16:
+		SerializeSint64(int64(v), data)
+
+	case int8:
+		SerializeSint64(int64(v), data)
+
+	case int:
+		SerializeSint64(int64(v), data)
+
+	case float64:
+		SerializeFloat64(v, data)
+
+	case float32:
+		SerializeFloat32(v, data)
 
 	case bool:
 		SerializeBoolean(v, data)
@@ -78,7 +81,7 @@ func Serialize(value interface{}, data *bytes.Buffer) error {
 		if rv.Kind() == reflect.Struct {
 			return SerializeStruct(value, data)
 		}
-		
+
 		// Check if it's an array or slice
 		if rv.Kind() == reflect.Array || rv.Kind() == reflect.Slice {
 			return SerializeArray(value, data)

@@ -16,7 +16,18 @@ func Deserialize(data []byte, out interface{}) ([]byte, error) {
 		return data, err
 	}
 
-	// Check if we're deserializing into a struct
+	// Check the header type first to determine how to deserialize
+	if len(data) > 0 {
+		header := data[0]
+		headerType := types.TypeFromHeader(header)
+
+		// If it's JSON type, use JSON deserialization regardless of output type
+		if headerType == types.Json {
+			return DeserializeJson(data, out)
+		}
+	}
+
+	// Check if we're deserializing into a struct (for non-JSON struct serialization)
 	if outValue.Kind() == reflect.Struct {
 		return deserializeStruct(data, outValue)
 	}
@@ -174,6 +185,10 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 	case types.Array:
 		// Use the dedicated DeserializeArray function
 		return DeserializeArray(data, outValue.Addr().Interface())
+
+	case types.Json:
+		// Use the dedicated DeserializeJson function
+		return DeserializeJson(data, outValue.Addr().Interface())
 
 	default:
 		return data, fmt.Errorf("unsupported type: %s", types.TypeName(headerType))
