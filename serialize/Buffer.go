@@ -3,6 +3,7 @@ package serialize
 import (
 	"bytes"
 	"ebe/types"
+	"ebe/utils"
 	"fmt"
 	"io"
 )
@@ -17,15 +18,9 @@ func SerializeBuffer(value []byte, w io.Writer) error {
 	// The high bit of the nibble will be 0 if the length is in the nibble and will be 1 if the length is in a following UInt
 	// Note: it is legal to have a zero length buffer so zero can't be used as the indicator
 	if length <= 0x07 {
-		_, err := w.Write([]byte{types.CreateHeader(types.Buffer, byte(length))})
-		if err != nil {
-			return err
-		}
+		utils.WriteByte(w, types.CreateHeader(types.Buffer, byte(length)))
 	} else {
-		_, err := w.Write([]byte{types.CreateHeader(types.Buffer, 0x08)})
-		if err != nil {
-			return err
-		}
+		utils.WriteByte(w, types.CreateHeader(types.Buffer, 0x08))
 		if err := SerializeUint64(uint64(length), w); err != nil {
 			return err
 		}

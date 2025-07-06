@@ -2,6 +2,7 @@ package serialize
 
 import (
 	"ebe/types"
+	"ebe/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,16 +12,13 @@ import (
 // The jsonMessage parameter should come from json.Marshal() wrapped as json.RawMessage
 func SerializeJson(jsonMessage json.RawMessage, w io.Writer) error {
 	// Write header with JSON type
-	_, err := w.Write([]byte{types.CreateHeader(types.Json, 0x00)})
-	if err != nil {
-		return err
-	}
+	utils.WriteByte(w, types.CreateHeader(types.Json, 0x00))
 	if err := SerializeUint64(uint64(len(jsonMessage)), w); err != nil {
 		return err
 	}
 
 	// Write the JSON bytes
-	_, err = w.Write(jsonMessage)
+	_, err := w.Write(jsonMessage)
 	return err
 }
 

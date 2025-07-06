@@ -3,6 +3,7 @@ package serialize
 import (
 	"bytes"
 	"ebe/types"
+	"ebe/utils"
 	"fmt"
 	"io"
 	"reflect"
@@ -31,14 +32,22 @@ func SerializeArray(value interface{}, w io.Writer) error {
 	// Write the array header with length (similar to string format)
 	// Special case arrays that are less than 8 elements in length
 	if length <= 0x07 {
-		w.Write([]byte{types.CreateHeader(types.Array, byte(length))})
+		if err := utils.WriteByte(w, types.CreateHeader(types.Array, byte(length))); err != nil {
+			return err
+		}
 	} else {
-		w.Write([]byte{types.CreateHeader(types.Array, 0x08)})
-		SerializeUint64(uint64(length), w)
+		if err := utils.WriteByte(w, types.CreateHeader(types.Array, 0x08)); err != nil {
+			return err
+		}
+		if err := SerializeUint64(uint64(length), w); err != nil {
+			return err
+		}
 	}
 
 	// Write the element type
-	w.Write([]byte{byte(elementType)})
+	if err := utils.WriteByte(w, byte(elementType)); err != nil {
+		return err
+	}
 
 	// Serialize each element with their normal headers
 	for i := range length {

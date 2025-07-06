@@ -2,6 +2,7 @@ package serialize
 
 import (
 	"ebe/types"
+	"ebe/utils"
 	"fmt"
 	"io"
 )
@@ -16,15 +17,9 @@ func SerializeString(value string, w io.Writer) error {
 	// The high bit of the nibble will be 0 if the length is in the nibble and will be 1 if the length is in a following UInt
 	// Note: it is legal to have a zero length string so zero can't be used as the indicator
 	if length <= 0x07 {
-		_, err := w.Write([]byte{types.CreateHeader(types.String, byte(length))})
-		if err != nil {
-			return err
-		}
+		utils.WriteByte(w, types.CreateHeader(types.String, byte(length)))
 	} else {
-		_, err := w.Write([]byte{types.CreateHeader(types.String, 0x08)})
-		if err != nil {
-			return err
-		}
+		utils.WriteByte(w, types.CreateHeader(types.String, 0x08))
 		if err := SerializeUint64(uint64(length), w); err != nil {
 			return err
 		}
@@ -55,7 +50,7 @@ func DeserializeString(data []byte) (string, []byte, error) {
 	// If the 4th bit of the nibble is not set then this is a special cased string whose length fits in the length nibble
 	// Otherwise get the string length from integer in the next data type
 	var err error = nil
-	if length & 0x08 != 0 {
+	if length&0x08 != 0 {
 		length, data, err = DeserializeUint64(data)
 		if err != nil {
 			return "", data, fmt.Errorf("failed to deserialize string length: %w", err)
