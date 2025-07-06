@@ -13,8 +13,6 @@ const (
 	String  Types = 7
 	Buffer  Types = 8
 	Array   Types = 9
-	Pointer Types = 10
-	Slice   Types = 11
 )
 
 var TypeNames = map[Types]string{
@@ -25,8 +23,6 @@ var TypeNames = map[Types]string{
 	Float:   "Float",
 	Complex: "Complex",
 	Boolean: "Boolean",
-	Pointer: "Pointer",
-	Slice:   "Slice",
 	String:  "String",
 	Buffer:  "Buffer",
 	Array:   "Array",

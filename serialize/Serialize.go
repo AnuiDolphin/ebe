@@ -22,24 +22,6 @@ func Serialize(value interface{}, data *bytes.Buffer) error {
 		value = rv.Interface() // Update value to the dereferenced value
 	}
 
-	// If the value is a struct, serialize each exported field
-	// Unexported fields are skipped
-	if rv.Kind() == reflect.Struct {
-
-		for i := 0; i < rv.NumField(); i++ {
-			field := rv.Type().Field(i)
-			if field.PkgPath != "" { // unexported field
-				continue
-			}
-
-			// Recursively call Serialize to serialize the field value
-			if err := Serialize(rv.Field(i).Interface(), data); err != nil {
-				return fmt.Errorf("error serializing field %s: %w", field.Name, err)
-			}
-		}
-		return nil
-	}
-
 	switch v := value.(type) {
 
 	case uint64, uint32, uint16, uint8, uint:
@@ -92,8 +74,12 @@ func Serialize(value interface{}, data *bytes.Buffer) error {
 		SerializeBuffer(v.Bytes(), data)
 
 	default:
+		// Check if it's a struct
+		if rv.Kind() == reflect.Struct {
+			return SerializeStruct(value, data)
+		}
+		
 		// Check if it's an array or slice
-		rv := reflect.ValueOf(value)
 		if rv.Kind() == reflect.Array || rv.Kind() == reflect.Slice {
 			return SerializeArray(value, data)
 		}
