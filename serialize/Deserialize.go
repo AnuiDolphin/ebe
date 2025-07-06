@@ -1,7 +1,6 @@
 package serialize
 
 import (
-	"bytes"
 	"ebe/types"
 	"ebe/utils"
 	"fmt"
@@ -30,7 +29,7 @@ func Deserialize(r io.Reader, out interface{}) ([]byte, error) {
 
 		// If it's JSON type, use JSON deserialization regardless of output type
 		if headerType == types.Json {
-			return DeserializeJson(data, out)
+			return deserializeJson(data, out)
 		}
 	}
 
@@ -65,38 +64,6 @@ func getOutputValue(out interface{}) (reflect.Value, error) {
 	return outValue, nil
 }
 
-// deserializeStruct deserializes data into a struct by deserializing each field in order
-func deserializeStruct(data []byte, structValue reflect.Value) ([]byte, error) {
-
-	remaining := data
-	structType := structValue.Type()
-
-	// Iterate through each field in the struct
-	for i := 0; i < structValue.NumField(); i++ {
-
-		field := structValue.Field(i)
-		fieldType := structType.Field(i)
-
-		// Skip unexported fields
-		if !field.CanSet() {
-			continue
-		}
-
-		// Create a pointer to the field for deserialization
-		fieldPtr := field.Addr().Interface()
-
-		// Recursively call Deserialize to deserialize into this field
-		newRemaining, err := Deserialize(bytes.NewReader(remaining), fieldPtr)
-		if err != nil {
-			return remaining, fmt.Errorf("failed to deserialize field '%s': %w", fieldType.Name, err)
-		}
-
-		remaining = newRemaining
-	}
-
-	return remaining, nil
-}
-
 // deserializeSimpleType deserializes data into a simple (non-struct) type
 func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) {
 
@@ -110,7 +77,7 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 
 	switch headerType {
 	case types.UNibble:
-		value, remaining, err := DeserializeUNibble(data)
+		value, remaining, err := deserializeUNibble(data)
 		if err != nil {
 			return remaining, err
 		}
@@ -120,7 +87,7 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.SNibble:
-		value, remaining, err := DeserializeSNibble(data)
+		value, remaining, err := deserializeSNibble(data)
 		if err != nil {
 			return remaining, err
 		}
@@ -130,7 +97,7 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.UInt:
-		value, remaining, err := DeserializeUint64(data)
+		value, remaining, err := deserializeUint64(data)
 		if err != nil {
 			return remaining, err
 		}
@@ -140,7 +107,7 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.SInt:
-		value, remaining, err := DeserializeSint64(data)
+		value, remaining, err := deserializeSint64(data)
 		if err != nil {
 			return remaining, err
 		}
@@ -150,7 +117,7 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.Float:
-		value, remaining, err := DeserializeFloat64(data)
+		value, remaining, err := deserializeFloat64(data)
 		if err != nil {
 			return remaining, err
 		}
@@ -160,7 +127,7 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.Boolean:
-		value, remaining, err := DeserializeBoolean(data)
+		value, remaining, err := deserializeBoolean(data)
 		if err != nil {
 			return remaining, err
 		}
@@ -170,7 +137,7 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.String:
-		value, remaining, err := DeserializeString(data)
+		value, remaining, err := deserializeString(data)
 		if err != nil {
 			return remaining, err
 		}
@@ -180,7 +147,7 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.Buffer:
-		value, remaining, err := DeserializeBuffer(data)
+		value, remaining, err := deserializeBuffer(data)
 		if err != nil {
 			return remaining, err
 		}
@@ -190,16 +157,16 @@ func deserializeSimpleType(data []byte, outValue reflect.Value) ([]byte, error) 
 		return remaining, nil
 
 	case types.Array:
-		// Use the dedicated DeserializeArray function with streaming
-		remaining, err := DeserializeArray(data, outValue.Addr().Interface())
+		// Use the dedicated deserializeArray function with streaming
+		remaining, err := deserializeArray(data, outValue.Addr().Interface())
 		if err != nil {
 			return data, err
 		}
 		return remaining, nil
 
 	case types.Json:
-		// Use the dedicated DeserializeJson function
-		return DeserializeJson(data, outValue.Addr().Interface())
+		// Use the dedicated deserializeJson function
+		return deserializeJson(data, outValue.Addr().Interface())
 
 	default:
 		return data, fmt.Errorf("unsupported type: %s", types.TypeName(headerType))

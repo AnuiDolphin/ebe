@@ -9,7 +9,7 @@ import (
 	"math"
 )
 
-func DeserializeUNibble(data []byte) (uint8, []byte, error) {
+func deserializeUNibble(data []byte) (uint8, []byte, error) {
 
 	if len(data) == 0 {
 		return 0, data, fmt.Errorf("no data to deserialize")
@@ -29,8 +29,8 @@ func DeserializeUNibble(data []byte) (uint8, []byte, error) {
 	return uint8(length), data, nil
 }
 
-func DeserializeUint8(data []byte) (uint8, []byte, error) {
-	value, remainingData, err := DeserializeUint64(data)
+func deserializeUint8(data []byte) (uint8, []byte, error) {
+	value, remainingData, err := deserializeUint64(data)
 	if err != nil {
 		return 0, remainingData, err
 	}
@@ -40,8 +40,8 @@ func DeserializeUint8(data []byte) (uint8, []byte, error) {
 	return uint8(value), remainingData, nil
 }
 
-func DeserializeUint16(data []byte) (uint16, []byte, error) {
-	value, remainingData, err := DeserializeUint64(data)
+func deserializeUint16(data []byte) (uint16, []byte, error) {
+	value, remainingData, err := deserializeUint64(data)
 	if err != nil {
 		return 0, remainingData, err
 	}
@@ -51,8 +51,8 @@ func DeserializeUint16(data []byte) (uint16, []byte, error) {
 	return uint16(value), remainingData, nil
 }
 
-func DeserializeUint32(data []byte) (uint32, []byte, error) {
-	value, remainingData, err := DeserializeUint64(data)
+func deserializeUint32(data []byte) (uint32, []byte, error) {
+	value, remainingData, err := deserializeUint64(data)
 	if err != nil {
 		return 0, remainingData, err
 	}
@@ -62,7 +62,7 @@ func DeserializeUint32(data []byte) (uint32, []byte, error) {
 	return uint32(value), remainingData, nil
 }
 
-func DeserializeUint64(data []byte) (uint64, []byte, error) {
+func deserializeUint64(data []byte) (uint64, []byte, error) {
 
 	if len(data) == 0 {
 		return 0, data, fmt.Errorf("no data to deserialize")
@@ -102,8 +102,8 @@ func DeserializeUint64(data []byte) (uint64, []byte, error) {
 	return value, data, nil
 }
 
-func DeserializeUint(data []byte) (uint64, []byte, error) {
-	return DeserializeUint64(data)
+func deserializeUint(data []byte) (uint64, []byte, error) {
+	return deserializeUint64(data)
 }
 
 //
@@ -112,22 +112,22 @@ func DeserializeUint(data []byte) (uint64, []byte, error) {
 // All methods write to the writer.
 //
 
-func SerializeUint8(value uint8, writer io.Writer) error {
+func serializeUint8(value uint8, writer io.Writer) error {
 	// Serialize uint8 as uint64
-	return SerializeUint64(uint64(value), writer)
+	return serializeUint64(uint64(value), writer)
 }
 
-func SerializeUint16(value uint16, writer io.Writer) error {
+func serializeUint16(value uint16, writer io.Writer) error {
 	// Serialize uint16 as uint64
-	return SerializeUint64(uint64(value), writer)
+	return serializeUint64(uint64(value), writer)
 }
 
-func SerializeUint32(value uint32, writer io.Writer) error {
+func serializeUint32(value uint32, writer io.Writer) error {
 	// Serialize uint32 as uint64
-	return SerializeUint64(uint64(value), writer)
+	return serializeUint64(uint64(value), writer)
 }
 
-func SerializeUint64(value uint64, writer io.Writer) error {
+func serializeUint64(value uint64, writer io.Writer) error {
 	// This function writes the serialized unsigned integer to the writer
 
 	// Figure out what size of integer is needed for the data
@@ -176,31 +176,31 @@ func SerializeUint64(value uint64, writer io.Writer) error {
 
 	// Write the data bytes
 	for i := uint8(length - 1); ; i-- {
-		if err := utils.WriteByte(writer, byte(value >> (i * 8))); err != nil {
+		if err := utils.WriteByte(writer, byte(value>>(i*8))); err != nil {
 			return err
 		}
 		if i == 0 {
 			break
 		}
 	}
-	
+
 	return nil
 }
 
 // Wrapper functions that preserve the *bytes.Buffer interface for backward compatibility
 
 func SerializeUint8Buffer(value uint8, data *bytes.Buffer) error {
-	return SerializeUint8(value, data)
+	return serializeUint8(value, data)
 }
 
 func SerializeUint16Buffer(value uint16, data *bytes.Buffer) error {
-	return SerializeUint16(value, data)
+	return serializeUint16(value, data)
 }
 
 func SerializeUint32Buffer(value uint32, data *bytes.Buffer) error {
-	return SerializeUint32(value, data)
+	return serializeUint32(value, data)
 }
 
 func SerializeUint64Buffer(value uint64, data *bytes.Buffer) error {
-	return SerializeUint64(value, data)
+	return serializeUint64(value, data)
 }

@@ -71,14 +71,14 @@ func TestJsonSerializeDeserialize(t *testing.T) {
 
 			// Serialize the JSON as json.RawMessage using our library
 			var buffer bytes.Buffer
-			err = serialize.SerializeJson(json.RawMessage(jsonBytes), &buffer)
+			err = serialize.Serialize(json.RawMessage(jsonBytes), &buffer)
 			if err != nil {
-				t.Fatalf("SerializeJson failed: %v", err)
+				t.Fatalf("Serialize failed: %v", err)
 			}
 
 			serializedData := buffer.Bytes()
 			if len(serializedData) == 0 {
-				t.Fatal("SerializeJson produced empty data")
+				t.Fatal("Serialize produced empty data")
 			}
 
 			// Create a variable of the same type for deserialization
@@ -99,13 +99,13 @@ func TestJsonSerializeDeserialize(t *testing.T) {
 			}
 
 			// Deserialize using our library
-			remaining, err := serialize.DeserializeJson(serializedData, result)
+			remaining, err := serialize.Deserialize(bytes.NewReader(serializedData), result)
 			if err != nil {
-				t.Fatalf("DeserializeJson failed: %v", err)
+				t.Fatalf("Deserialize failed: %v", err)
 			}
 
 			if len(remaining) != 0 {
-				t.Errorf("DeserializeJson left %d bytes remaining", len(remaining))
+				t.Errorf("Deserialize left %d bytes remaining", len(remaining))
 			}
 
 			// Compare the results by marshaling both to JSON and comparing

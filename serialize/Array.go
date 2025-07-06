@@ -10,7 +10,7 @@ import (
 )
 
 // This function appends the serialized array to the existing writer
-func SerializeArray(value interface{}, w io.Writer) error {
+func serializeArray(value interface{}, w io.Writer) error {
 
 	// Get the reflect value to work with arrays/slices
 	rv := reflect.ValueOf(value)
@@ -39,7 +39,7 @@ func SerializeArray(value interface{}, w io.Writer) error {
 		if err := utils.WriteByte(w, types.CreateHeader(types.Array, 0x08)); err != nil {
 			return err
 		}
-		if err := SerializeUint64(uint64(length), w); err != nil {
+		if err := serializeUint64(uint64(length), w); err != nil {
 			return err
 		}
 	}
@@ -60,7 +60,7 @@ func SerializeArray(value interface{}, w io.Writer) error {
 	return nil
 }
 
-func DeserializeArray(data []byte, out interface{}) ([]byte, error) {
+func deserializeArray(data []byte, out interface{}) ([]byte, error) {
 	if len(data) == 0 {
 		return data, fmt.Errorf("no data to deserialize")
 	}
@@ -79,7 +79,7 @@ func DeserializeArray(data []byte, out interface{}) ([]byte, error) {
 	// Otherwise get the array length from integer in the next data type
 	var err error = nil
 	if length&0x08 != 0 {
-		length, remaining, err = DeserializeUint64(remaining)
+		length, remaining, err = deserializeUint64(remaining)
 		if err != nil {
 			return remaining, fmt.Errorf("failed to deserialize array length: %w", err)
 		}

@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-func SerializeBuffer(value []byte, w io.Writer) error {
+func serializeBuffer(value []byte, w io.Writer) error {
 	// This function appends the serialized buffer to the existing writer
 	// Write the length of the buffer as an [UInt]
 	var length = len(value)
@@ -21,7 +21,7 @@ func SerializeBuffer(value []byte, w io.Writer) error {
 		utils.WriteByte(w, types.CreateHeader(types.Buffer, byte(length)))
 	} else {
 		utils.WriteByte(w, types.CreateHeader(types.Buffer, 0x08))
-		if err := SerializeUint64(uint64(length), w); err != nil {
+		if err := serializeUint64(uint64(length), w); err != nil {
 			return err
 		}
 	}
@@ -31,7 +31,7 @@ func SerializeBuffer(value []byte, w io.Writer) error {
 	return err
 }
 
-func DeserializeBuffer(data []byte) (*bytes.Buffer, []byte, error) {
+func deserializeBuffer(data []byte) (*bytes.Buffer, []byte, error) {
 
 	if len(data) == 0 {
 		return new(bytes.Buffer), data, fmt.Errorf("no data to deserialize")
@@ -53,7 +53,7 @@ func DeserializeBuffer(data []byte) (*bytes.Buffer, []byte, error) {
 	// Otherwise get the buffer length from integer in the next data type
 	if length == 8 {
 		var err error
-		length, data, err = DeserializeUint(data[0:])
+		length, data, err = deserializeUint(data[0:])
 		if err != nil {
 			return value, data, fmt.Errorf("failed to deserialize buffer length: %w", err)
 		}

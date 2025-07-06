@@ -1,14 +1,15 @@
 package serialize
 
 import (
+	"bytes"
 	"fmt"
-	"reflect"
 	"io"
+	"reflect"
 )
 
 // SerializeStruct serializes a struct by serializing each exported field in order
 // Unexported fields are skipped
-func SerializeStruct(value interface{}, w io.Writer) error {
+func serializeStruct(value interface{}, w io.Writer) error {
 	rv := reflect.ValueOf(value)
 
 	// Ensure we have a struct
@@ -30,4 +31,34 @@ func SerializeStruct(value interface{}, w io.Writer) error {
 	}
 
 	return nil
+}
+
+// deserializeStruct deserializes data into a struct by deserializing each field in order
+func deserializeStruct(data []byte, structValue reflect.Value) ([]byte, error) {
+	remaining := data
+	structType := structValue.Type()
+
+	// Iterate through each field in the struct
+	for i := 0; i < structValue.NumField(); i++ {
+		field := structValue.Field(i)
+		fieldType := structType.Field(i)
+
+		// Skip unexported fields
+		if !field.CanSet() {
+			continue
+		}
+
+		// Create a pointer to the field for deserialization
+		fieldPtr := field.Addr().Interface()
+
+		// Recursively call Deserialize to deserialize into this field
+		newRemaining, err := Deserialize(bytes.NewReader(remaining), fieldPtr)
+		if err != nil {
+			return remaining, fmt.Errorf("failed to deserialize field '%s': %w", fieldType.Name, err)
+		}
+
+		remaining = newRemaining
+	}
+
+	return remaining, nil
 }

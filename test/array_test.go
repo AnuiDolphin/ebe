@@ -275,13 +275,6 @@ func TestArraySerializationErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("non-array type", func(t *testing.T) {
-		var buf bytes.Buffer
-		err := serialize.SerializeArray("not an array", &buf)
-		if err == nil {
-			t.Error("Expected error when calling SerializeArray with non-array type, got nil")
-		}
-	})
 }
 
 // TestArrayDeserializationErrors tests error conditions during deserialization
@@ -291,7 +284,7 @@ func TestArrayDeserializationErrors(t *testing.T) {
 		data := []byte{0x60, 0x02, 0x03} // Wrong type (6 = Boolean, should be 9 = Array)
 		var out []int
 
-		_, err := serialize.DeserializeArray(data, &out)
+		_, err := serialize.Deserialize(bytes.NewReader(data), &out)
 		if err == nil {
 			t.Error("Expected error when deserializing corrupted array header, got nil")
 		}
@@ -302,7 +295,7 @@ func TestArrayDeserializationErrors(t *testing.T) {
 		data := []byte{0x92, 0x02} // Array header (9 = Array, 2 = length), element type (2 = SInt), but no elements
 		var out []int
 
-		_, err := serialize.DeserializeArray(data, &out)
+		_, err := serialize.Deserialize(bytes.NewReader(data), &out)
 		if err == nil {
 			t.Error("Expected error when deserializing incomplete array data, got nil")
 		}
@@ -312,7 +305,7 @@ func TestArrayDeserializationErrors(t *testing.T) {
 		data := []byte{0x91, 0x02, 0x01} // Valid array data
 		var out []int
 
-		_, err := serialize.DeserializeArray(data, out) // Not a pointer
+		_, err := serialize.Deserialize(bytes.NewReader(data), out) // Not a pointer
 		if err == nil {
 			t.Error("Expected error when deserializing to non-pointer, got nil")
 		}
@@ -322,7 +315,7 @@ func TestArrayDeserializationErrors(t *testing.T) {
 		data := []byte{0x91, 0x02, 0x01} // Valid array data
 		var out int
 
-		_, err := serialize.DeserializeArray(data, &out) // Pointer to int, not array/slice
+		_, err := serialize.Deserialize(bytes.NewReader(data), &out) // Pointer to int, not array/slice
 		if err == nil {
 			t.Error("Expected error when deserializing to non-array/slice type, got nil")
 		}

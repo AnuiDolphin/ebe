@@ -10,11 +10,11 @@ import (
 	"math"
 )
 
-func SerializeFloat64(value float64, writer io.Writer) error {
+func serializeFloat64(value float64, writer io.Writer) error {
 
 	// If the value fits into a float32, then serialize as a float32
 	if value >= -math.SmallestNonzeroFloat32 && value <= math.MaxFloat32 {
-		return SerializeFloat32(float32(value), writer)
+		return serializeFloat32(float32(value), writer)
 	}
 
 	// Write the header as float64
@@ -26,7 +26,7 @@ func SerializeFloat64(value float64, writer io.Writer) error {
 	return binary.Write(writer, binary.LittleEndian, float64(value))
 }
 
-func SerializeFloat32(value float32, writer io.Writer) error {
+func serializeFloat32(value float32, writer io.Writer) error {
 
 	// Write the header as float32
 	if err := utils.WriteByte(writer, types.CreateHeader(types.Float, 4)); err != nil {
@@ -37,7 +37,7 @@ func SerializeFloat32(value float32, writer io.Writer) error {
 	return binary.Write(writer, binary.LittleEndian, value)
 }
 
-func DeserializeFloat(data []byte) (float64, []byte, error) {
+func deserializeFloat(data []byte) (float64, []byte, error) {
 
 	if len(data) == 0 {
 		return 0, data, fmt.Errorf("no data to deserialize")
@@ -87,7 +87,7 @@ func DeserializeFloat(data []byte) (float64, []byte, error) {
 	return value, data, nil
 }
 
-func DeserializeFloat32(data []byte) (float32, []byte, error) {
+func deserializeFloat32(data []byte) (float32, []byte, error) {
 	if len(data) == 0 {
 		return 0, data, fmt.Errorf("no data to deserialize")
 	}
@@ -125,6 +125,6 @@ func DeserializeFloat32(data []byte) (float32, []byte, error) {
 	return value, data, nil
 }
 
-func DeserializeFloat64(data []byte) (float64, []byte, error) {
-	return DeserializeFloat(data)
+func deserializeFloat64(data []byte) (float64, []byte, error) {
+	return deserializeFloat(data)
 }

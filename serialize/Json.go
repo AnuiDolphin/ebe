@@ -10,10 +10,10 @@ import (
 
 // SerializeJson serializes a json.RawMessage
 // The jsonMessage parameter should come from json.Marshal() wrapped as json.RawMessage
-func SerializeJson(jsonMessage json.RawMessage, w io.Writer) error {
+func serializeJson(jsonMessage json.RawMessage, w io.Writer) error {
 	// Write header with JSON type
 	utils.WriteByte(w, types.CreateHeader(types.Json, 0x00))
-	if err := SerializeUint64(uint64(len(jsonMessage)), w); err != nil {
+	if err := serializeUint64(uint64(len(jsonMessage)), w); err != nil {
 		return err
 	}
 
@@ -23,7 +23,7 @@ func SerializeJson(jsonMessage json.RawMessage, w io.Writer) error {
 }
 
 // DeserializeJson deserializes JSON data and unmarshals it into the provided output
-func DeserializeJson(data []byte, out interface{}) ([]byte, error) {
+func deserializeJson(data []byte, out interface{}) ([]byte, error) {
 
 	if len(data) == 0 {
 		return data, fmt.Errorf("empty data")
@@ -38,7 +38,7 @@ func DeserializeJson(data []byte, out interface{}) ([]byte, error) {
 	remaining := data[1:]
 
 	// Length always follows as a UInt (no nibble optimization)
-	length, remaining, err := DeserializeUint64(remaining)
+	length, remaining, err := deserializeUint64(remaining)
 	if err != nil {
 		return remaining, fmt.Errorf("failed to deserialize JSON length: %w", err)
 	}

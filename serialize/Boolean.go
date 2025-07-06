@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-func SerializeBoolean(value bool, w io.Writer) error {
+func serializeBoolean(value bool, w io.Writer) error {
 	// This function appends the serialized boolean to the existing writer
 	// Set the header for the type and put the boolean value in the value nibble
 	var b byte
@@ -19,7 +19,7 @@ func SerializeBoolean(value bool, w io.Writer) error {
 	return err
 }
 
-func DeserializeBoolean(data []byte) (bool, []byte, error) {
+func deserializeBoolean(data []byte) (bool, []byte, error) {
 
 	if len(data) == 0 {
 		return false, data, fmt.Errorf("no data to deserialize")

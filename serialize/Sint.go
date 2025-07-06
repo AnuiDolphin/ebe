@@ -8,7 +8,7 @@ import (
 	"math"
 )
 
-func DeserializeSNibble(data []byte) (int8, []byte, error) {
+func deserializeSNibble(data []byte) (int8, []byte, error) {
 
 	if len(data) == 0 {
 		return 0, data, fmt.Errorf("no data to deserialize")
@@ -35,8 +35,8 @@ func DeserializeSNibble(data []byte) (int8, []byte, error) {
 	}
 }
 
-func DeserializeSint8(data []byte) (int8, []byte, error) {
-	value, remainingData, err := DeserializeSint64(data)
+func deserializeSint8(data []byte) (int8, []byte, error) {
+	value, remainingData, err := deserializeSint64(data)
 	if err != nil {
 		return 0, remainingData, err
 	}
@@ -46,8 +46,8 @@ func DeserializeSint8(data []byte) (int8, []byte, error) {
 	return int8(value), remainingData, nil
 }
 
-func DeserializeSint16(data []byte) (int16, []byte, error) {
-	value, remainingData, err := DeserializeSint64(data)
+func deserializeSint16(data []byte) (int16, []byte, error) {
+	value, remainingData, err := deserializeSint64(data)
 	if err != nil {
 		return 0, remainingData, err
 	}
@@ -57,8 +57,8 @@ func DeserializeSint16(data []byte) (int16, []byte, error) {
 	return int16(value), remainingData, nil
 }
 
-func DeserializeSint32(data []byte) (int32, []byte, error) {
-	value, remainingData, err := DeserializeSint64(data)
+func deserializeSint32(data []byte) (int32, []byte, error) {
+	value, remainingData, err := deserializeSint64(data)
 	if err != nil {
 		return 0, remainingData, err
 	}
@@ -68,7 +68,7 @@ func DeserializeSint32(data []byte) (int32, []byte, error) {
 	return int32(value), remainingData, nil
 }
 
-func DeserializeSint64(data []byte) (int64, []byte, error) {
+func deserializeSint64(data []byte) (int64, []byte, error) {
 
 	if len(data) == 0 {
 		return 0, data, fmt.Errorf("no data to deserialize")
@@ -79,7 +79,7 @@ func DeserializeSint64(data []byte) (int64, []byte, error) {
 	var length = types.ValueFromHeader(header)
 	data = data[1:]
 
-		if len(data) == 0 {
+	if len(data) == 0 {
 		return 0, data, fmt.Errorf("no data to deserialize")
 	}
 
@@ -130,22 +130,22 @@ func DeserializeSint64(data []byte) (int64, []byte, error) {
 // These functions serialize signed integers into a writer.
 //
 
-func SerializeSint8(value int8, writer io.Writer) error {
+func serializeSint8(value int8, writer io.Writer) error {
 	// Serialize int8 as int64
-	return SerializeSint64(int64(value), writer)
+	return serializeSint64(int64(value), writer)
 }
 
-func SerializeSint16(value int16, writer io.Writer) error {
+func serializeSint16(value int16, writer io.Writer) error {
 	// Serialize int16 as int64
-	return SerializeSint64(int64(value), writer)
+	return serializeSint64(int64(value), writer)
 }
 
-func SerializeSint32(value int32, writer io.Writer) error {
+func serializeSint32(value int32, writer io.Writer) error {
 	// Serialize int32 as int64
-	return SerializeSint64(int64(value), writer)
+	return serializeSint64(int64(value), writer)
 }
 
-func SerializeSint64(value int64, writer io.Writer) error {
+func serializeSint64(value int64, writer io.Writer) error {
 	// This function writes the serialized signed integer to the writer
 
 	// Get the negative sign and the abs of the data since we will store the value as

@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-func SerializeString(value string, w io.Writer) error {
+func serializeString(value string, w io.Writer) error {
 	// This function appends the serialized string to the existing writer
 	// Write the length of the string as an [UInt]
 	var length = len(value)
@@ -20,7 +20,7 @@ func SerializeString(value string, w io.Writer) error {
 		utils.WriteByte(w, types.CreateHeader(types.String, byte(length)))
 	} else {
 		utils.WriteByte(w, types.CreateHeader(types.String, 0x08))
-		if err := SerializeUint64(uint64(length), w); err != nil {
+		if err := serializeUint64(uint64(length), w); err != nil {
 			return err
 		}
 	}
@@ -30,7 +30,7 @@ func SerializeString(value string, w io.Writer) error {
 	return err
 }
 
-func DeserializeString(data []byte) (string, []byte, error) {
+func deserializeString(data []byte) (string, []byte, error) {
 
 	if len(data) == 0 {
 		return "", data, fmt.Errorf("no data to deserialize")
@@ -51,7 +51,7 @@ func DeserializeString(data []byte) (string, []byte, error) {
 	// Otherwise get the string length from integer in the next data type
 	var err error = nil
 	if length&0x08 != 0 {
-		length, data, err = DeserializeUint64(data)
+		length, data, err = deserializeUint64(data)
 		if err != nil {
 			return "", data, fmt.Errorf("failed to deserialize string length: %w", err)
 		}
