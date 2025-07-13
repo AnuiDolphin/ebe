@@ -4,5 +4,8 @@
 ebeTest
 ebe
 
+# Ignore compare app binaries
+compare/compare
+
 # Ignore vscode files
 .vscode/

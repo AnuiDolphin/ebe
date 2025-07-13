@@ -74,6 +74,10 @@ func Serialize(value interface{}, w io.Writer) error {
 	case *bytes.Buffer:
 		return serializeBuffer(v.Bytes(), w)
 
+	// Fast paths for common array types
+	case []int, []int32, []int64, []int8, []int16:
+		return serializeIntArray(v, w)
+
 	default:
 
 		// Handle structs by serializing each exported field in order
@@ -83,7 +87,7 @@ func Serialize(value interface{}, w io.Writer) error {
 
 		// Check if it's an array or slice
 		if rv.Kind() == reflect.Array || rv.Kind() == reflect.Slice {
-			return serializeArray(value, w)
+			return serializeArray(rv, w)
 		}
 
 		// Check if it's a map

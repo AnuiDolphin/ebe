@@ -9,15 +9,7 @@ import (
 )
 
 // This function appends the serialized array to the existing writer
-func serializeArray(value interface{}, w io.Writer) error {
-
-	// Get the reflect value to work with arrays/slices
-	rv := reflect.ValueOf(value)
-
-	// Handle both arrays and slices
-	if rv.Kind() != reflect.Array && rv.Kind() != reflect.Slice {
-		return fmt.Errorf("expected array or slice, got %v", rv.Kind())
-	}
+func serializeArray(rv reflect.Value, w io.Writer) error {
 
 	var length = rv.Len()
 
@@ -53,6 +45,88 @@ func serializeArray(value interface{}, w io.Writer) error {
 		element := rv.Index(i).Interface()
 		if err := Serialize(element, w); err != nil {
 			return fmt.Errorf("failed to serialize array element %d: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
+// Fast path serialization for integer arrays - avoids reflection overhead
+func serializeIntArray(arr interface{}, w io.Writer) error {
+	var length int
+	var elementType types.Types
+
+	// Handle different integer slice types
+	switch v := arr.(type) {
+	case []int:
+		length = len(v)
+		elementType = types.SInt
+	case []int32:
+		length = len(v)
+		elementType = types.SInt
+	case []int64:
+		length = len(v)
+		elementType = types.SInt
+	case []int8:
+		length = len(v)
+		elementType = types.SInt
+	case []int16:
+		length = len(v)
+		elementType = types.SInt
+	default:
+		return fmt.Errorf("unsupported integer array type: %T", arr)
+	}
+
+	// Write the array header with length
+	if length <= 0x07 {
+		if err := utils.WriteByte(w, types.CreateHeader(types.Array, byte(length))); err != nil {
+			return err
+		}
+	} else {
+		if err := utils.WriteByte(w, types.CreateHeader(types.Array, 0x08)); err != nil {
+			return err
+		}
+		if err := serializeUint(uint64(length), w); err != nil {
+			return err
+		}
+	}
+
+	// Write the element type
+	if err := utils.WriteByte(w, byte(elementType)); err != nil {
+		return err
+	}
+
+	// Serialize each element directly without reflection
+	switch v := arr.(type) {
+	case []int:
+		for _, elem := range v {
+			if err := serializeSint(int64(elem), w); err != nil {
+				return fmt.Errorf("failed to serialize int element: %w", err)
+			}
+		}
+	case []int32:
+		for _, elem := range v {
+			if err := serializeSint(int64(elem), w); err != nil {
+				return fmt.Errorf("failed to serialize int32 element: %w", err)
+			}
+		}
+	case []int64:
+		for _, elem := range v {
+			if err := serializeSint(elem, w); err != nil {
+				return fmt.Errorf("failed to serialize int64 element: %w", err)
+			}
+		}
+	case []int8:
+		for _, elem := range v {
+			if err := serializeSint(int64(elem), w); err != nil {
+				return fmt.Errorf("failed to serialize int8 element: %w", err)
+			}
+		}
+	case []int16:
+		for _, elem := range v {
+			if err := serializeSint(int64(elem), w); err != nil {
+				return fmt.Errorf("failed to serialize int16 element: %w", err)
+			}
 		}
 	}
 
