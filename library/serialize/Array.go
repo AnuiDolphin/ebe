@@ -20,8 +20,25 @@ func serializeArray(rv reflect.Value, w io.Writer) error {
 		return fmt.Errorf("unsupported array element type: %w", err)
 	}
 
-	// Write the array header with length (similar to string format)
-	// Special case arrays that are less than 8 elements in length
+	// Write the array header
+	if err := writeArrayHeader(w, length, elementType); err != nil {
+		return err
+	}
+
+	// Serialize each element with their normal headers
+	for i := range length {
+		element := rv.Index(i).Interface()
+		if err := Serialize(element, w); err != nil {
+			return fmt.Errorf("failed to serialize array element %d: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
+// writeArrayHeader writes the array header with length and element type
+func writeArrayHeader(w io.Writer, length int, elementType types.Types) error {
+	// Write the array header with length
 	if length <= 0x07 {
 		if err := utils.WriteByte(w, types.CreateHeader(types.Array, byte(length))); err != nil {
 			return err
@@ -38,14 +55,6 @@ func serializeArray(rv reflect.Value, w io.Writer) error {
 	// Write the element type
 	if err := utils.WriteByte(w, byte(elementType)); err != nil {
 		return err
-	}
-
-	// Serialize each element with their normal headers
-	for i := range length {
-		element := rv.Index(i).Interface()
-		if err := Serialize(element, w); err != nil {
-			return fmt.Errorf("failed to serialize array element %d: %w", i, err)
-		}
 	}
 
 	return nil
@@ -77,22 +86,8 @@ func serializeIntArray(arr interface{}, w io.Writer) error {
 		return fmt.Errorf("unsupported integer array type: %T", arr)
 	}
 
-	// Write the array header with length
-	if length <= 0x07 {
-		if err := utils.WriteByte(w, types.CreateHeader(types.Array, byte(length))); err != nil {
-			return err
-		}
-	} else {
-		if err := utils.WriteByte(w, types.CreateHeader(types.Array, 0x08)); err != nil {
-			return err
-		}
-		if err := serializeUint(uint64(length), w); err != nil {
-			return err
-		}
-	}
-
-	// Write the element type
-	if err := utils.WriteByte(w, byte(elementType)); err != nil {
+	// Write the array header
+	if err := writeArrayHeader(w, length, elementType); err != nil {
 		return err
 	}
 
@@ -127,6 +122,26 @@ func serializeIntArray(arr interface{}, w io.Writer) error {
 			if err := serializeSint(int64(elem), w); err != nil {
 				return fmt.Errorf("failed to serialize int16 element: %w", err)
 			}
+		}
+	}
+
+	return nil
+}
+
+// Fast path serialization for string arrays - avoids reflection overhead
+func serializeStringArray(arr []string, w io.Writer) error {
+	length := len(arr)
+	elementType := types.String
+
+	// Write the array header
+	if err := writeArrayHeader(w, length, elementType); err != nil {
+		return err
+	}
+
+	// Serialize each string element directly without reflection
+	for _, elem := range arr {
+		if err := serializeString(elem, w); err != nil {
+			return fmt.Errorf("failed to serialize string element: %w", err)
 		}
 	}
 

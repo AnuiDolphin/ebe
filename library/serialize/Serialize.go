@@ -78,6 +78,9 @@ func Serialize(value interface{}, w io.Writer) error {
 	case []int, []int32, []int64, []int8, []int16:
 		return serializeIntArray(v, w)
 
+	case []string:
+		return serializeStringArray(v, w)
+
 	default:
 
 		// Handle structs by serializing each exported field in order

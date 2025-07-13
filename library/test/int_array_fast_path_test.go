@@ -61,3 +61,43 @@ func TestIntArrayFastPath(t *testing.T) {
 		})
 	}
 }
+
+func TestStringArrayFastPath(t *testing.T) {
+	tests := []struct {
+		name string
+		data []string
+	}{
+		{"basic strings", []string{"hello", "world", "test"}},
+		{"empty array", []string{}},
+		{"single string", []string{"single"}},
+		{"unicode strings", []string{"café", "naïve", "résumé"}},
+		{"empty strings", []string{"", "hello", ""}},
+		{"long array", []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"}}, // > 7 elements
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			
+			// Serialize using fast path
+			err := serialize.Serialize(tt.data, &buf)
+			if err != nil {
+				t.Fatalf("String array fast path serialization failed: %v", err)
+			}
+			
+			// Verify we can deserialize back
+			var result []string
+			err = serialize.Deserialize(&buf, &result)
+			if err != nil {
+				t.Fatalf("String array deserialization failed: %v", err)
+			}
+			
+			// Verify length matches
+			if len(result) != len(tt.data) {
+				t.Fatalf("Length mismatch: expected %d, got %d", len(tt.data), len(result))
+			}
+			
+			t.Logf("Successfully serialized and deserialized %s with %d elements", tt.name, len(tt.data))
+		})
+	}
+}
