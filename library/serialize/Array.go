@@ -526,7 +526,7 @@ func getTypeForReflectType(t reflect.Type) (types.Types, error) {
 		}
 		return 0, fmt.Errorf("nested slices not yet supported")
 	case reflect.Struct:
-		return 0, fmt.Errorf("structs in arrays not yet supported")
+		return types.Struct, nil
 	default:
 		return 0, fmt.Errorf("unsupported type: %v", t)
 	}

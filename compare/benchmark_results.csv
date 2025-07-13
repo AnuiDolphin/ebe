@@ -1,2 +1,4 @@
 TestName,EBESize,ProtobufSize,SizeDifference,SizeRatio,EBETime_ns,ProtobufTime_ns,TimeDifference_ns,TimeRatio,EBEMemory,ProtobufMemory,MemoryDifference,MemoryRatio
-Primitives,79,111,-32,0.711712,4195,2395,1800,1.751566,488,112,376,4.357143
+Small Arrays,60,53,7,1.132075,1429,1530,-101,0.933987,272,64,208,4.250000
+Medium Arrays (100 elements),741,942,-201,0.786624,9195,980,8215,9.382653,3120,1024,2096,3.046875
+Large Arrays (1000+ elements),72174,67837,4337,1.063933,685407,55759,629648,12.292312,340432,73728,266704,4.617405
