@@ -7,14 +7,14 @@ import (
 	"testing"
 )
 
-// Test structs
-type Person struct {
+// Test structs for struct arrays
+type PersonStruct struct {
 	ID   uint32
 	Name string
 	Age  int32
 }
 
-type Company struct {
+type CompanyStruct struct {
 	ID       uint64
 	Name     string
 	Founded  int32
@@ -25,7 +25,7 @@ type EmptyStruct struct {
 }
 
 func TestBasicStructArray(t *testing.T) {
-	people := []Person{
+	people := []PersonStruct{
 		{ID: 1, Name: "Alice", Age: 30},
 		{ID: 2, Name: "Bob", Age: 25},
 	}
@@ -36,7 +36,7 @@ func TestBasicStructArray(t *testing.T) {
 		t.Fatalf("Serialization failed: %v", err)
 	}
 
-	var result []Person
+	var result []PersonStruct
 	err = serialize.Deserialize(bytes.NewReader(buf.Bytes()), &result)
 	if err != nil {
 		t.Fatalf("Deserialization failed: %v", err)
@@ -48,7 +48,7 @@ func TestBasicStructArray(t *testing.T) {
 }
 
 func TestEmptyStructArray(t *testing.T) {
-	var people []Person
+	var people []PersonStruct
 
 	var buf bytes.Buffer
 	err := serialize.Serialize(people, &buf)
@@ -56,7 +56,7 @@ func TestEmptyStructArray(t *testing.T) {
 		t.Fatalf("Serialization failed: %v", err)
 	}
 
-	var result []Person
+	var result []PersonStruct
 	err = serialize.Deserialize(bytes.NewReader(buf.Bytes()), &result)
 	if err != nil {
 		t.Fatalf("Deserialization failed: %v", err)
@@ -68,7 +68,7 @@ func TestEmptyStructArray(t *testing.T) {
 }
 
 func TestSingleElementStructArray(t *testing.T) {
-	people := []Person{{ID: 42, Name: "Solo", Age: 99}}
+	people := []PersonStruct{{ID: 42, Name: "Solo", Age: 99}}
 
 	var buf bytes.Buffer
 	err := serialize.Serialize(people, &buf)
@@ -76,7 +76,7 @@ func TestSingleElementStructArray(t *testing.T) {
 		t.Fatalf("Serialization failed: %v", err)
 	}
 
-	var result []Person
+	var result []PersonStruct
 	err = serialize.Deserialize(bytes.NewReader(buf.Bytes()), &result)
 	if err != nil {
 		t.Fatalf("Deserialization failed: %v", err)
@@ -89,9 +89,9 @@ func TestSingleElementStructArray(t *testing.T) {
 
 func TestLargeStructArray(t *testing.T) {
 	// Test with more than 7 elements to trigger overflow handling
-	people := make([]Person, 10)
+	people := make([]PersonStruct, 10)
 	for i := range people {
-		people[i] = Person{
+		people[i] = PersonStruct{
 			ID:   uint32(i + 1),
 			Name: "Person" + string(rune('A'+i)),
 			Age:  int32(20 + i),
@@ -104,7 +104,7 @@ func TestLargeStructArray(t *testing.T) {
 		t.Fatalf("Serialization failed: %v", err)
 	}
 
-	var result []Person
+	var result []PersonStruct
 	err = serialize.Deserialize(bytes.NewReader(buf.Bytes()), &result)
 	if err != nil {
 		t.Fatalf("Deserialization failed: %v", err)
@@ -116,7 +116,7 @@ func TestLargeStructArray(t *testing.T) {
 }
 
 func TestDifferentStructTypes(t *testing.T) {
-	companies := []Company{
+	companies := []CompanyStruct{
 		{ID: 1, Name: "Tech Corp", Founded: 2020, Revenue: 1000000.0},
 		{ID: 2, Name: "Data Inc", Founded: 2019, Revenue: 500000.0},
 	}
@@ -127,7 +127,7 @@ func TestDifferentStructTypes(t *testing.T) {
 		t.Fatalf("Serialization failed: %v", err)
 	}
 
-	var result []Company
+	var result []CompanyStruct
 	err = serialize.Deserialize(bytes.NewReader(buf.Bytes()), &result)
 	if err != nil {
 		t.Fatalf("Deserialization failed: %v", err)
@@ -160,7 +160,7 @@ func TestEmptyStructsArray(t *testing.T) {
 
 func TestStructArraySizeComparison(t *testing.T) {
 	// Test that struct arrays produce reasonable sizes
-	people := []Person{
+	people := []PersonStruct{
 		{ID: 1, Name: "Alice", Age: 30},
 		{ID: 2, Name: "Bob", Age: 25},
 	}
