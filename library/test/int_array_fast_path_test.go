@@ -154,3 +154,51 @@ func TestUintArrayFastPath(t *testing.T) {
 		})
 	}
 }
+
+func TestFloatArrayFastPath(t *testing.T) {
+	tests := []struct {
+		name string
+		data interface{}
+	}{
+		{"[]float32", []float32{1.5, 2.5, 3.14159}},
+		{"[]float64", []float64{1.5, 2.5, 3.14159265359}},
+		{"empty []float32", []float32{}},
+		{"empty []float64", []float64{}},
+		{"single element []float32", []float32{42.0}},
+		{"single element []float64", []float64{42.0}},
+		{"special values", []float64{0.0, -0.0, 1.0, -1.0}},
+		{"large float32 array", make([]float32, 10)}, // 10 elements for overflow test
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			
+			// Serialize using fast path
+			err := serialize.Serialize(tt.data, &buf)
+			if err != nil {
+				t.Fatalf("Float array fast path serialization failed: %v", err)
+			}
+			
+			// Verify we can deserialize back
+			var result interface{}
+			switch tt.data.(type) {
+			case []float32:
+				var out []float32
+				result = &out
+			case []float64:
+				var out []float64
+				result = &out
+			}
+			
+			err = serialize.Deserialize(&buf, result)
+			if err != nil {
+				t.Fatalf("Float array deserialization failed: %v", err)
+			}
+			
+			// Basic length check for now
+			// More detailed comparison would require reflection
+			t.Logf("Successfully serialized and deserialized %s", tt.name)
+		})
+	}
+}

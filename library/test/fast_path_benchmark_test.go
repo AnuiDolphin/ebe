@@ -104,3 +104,22 @@ func BenchmarkLargeIntArray(b *testing.B) {
 	
 	b.ReportAllocs()
 }
+func BenchmarkFloatArraySerialization(b *testing.B) {
+	data := make([]float64, 1000)
+	for i := range data {
+		data[i] = float64(i) * 3.14159
+	}
+	
+	var buf bytes.Buffer
+	b.ResetTimer()
+	
+	for i := 0; i < b.N; i++ {
+		buf.Reset()
+		err := serialize.Serialize(data, &buf)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+	
+	b.ReportAllocs()
+}

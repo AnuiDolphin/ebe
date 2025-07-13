@@ -207,6 +207,47 @@ func serializeUintArray(arr interface{}, w io.Writer) error {
 	return nil
 }
 
+// Fast path serialization for float arrays - avoids reflection overhead
+func serializeFloatArray(arr interface{}, w io.Writer) error {
+	var length int
+	var elementType types.Types
+
+	// Handle different float slice types
+	switch v := arr.(type) {
+	case []float32:
+		length = len(v)
+		elementType = types.Float
+	case []float64:
+		length = len(v)
+		elementType = types.Float
+	default:
+		return fmt.Errorf("unsupported float array type: %T", arr)
+	}
+
+	// Write the array header
+	if err := writeArrayHeader(w, length, elementType); err != nil {
+		return err
+	}
+
+	// Serialize each element directly without reflection
+	switch v := arr.(type) {
+	case []float32:
+		for _, elem := range v {
+			if err := serializeFloat(float64(elem), w); err != nil {
+				return fmt.Errorf("failed to serialize float32 element: %w", err)
+			}
+		}
+	case []float64:
+		for _, elem := range v {
+			if err := serializeFloat(elem, w); err != nil {
+				return fmt.Errorf("failed to serialize float64 element: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func deserializeArray(r io.Reader, out interface{}) error {
 
 	// Read the header using utils.ReadHeader

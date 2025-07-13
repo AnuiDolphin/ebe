@@ -81,6 +81,9 @@ func Serialize(value interface{}, w io.Writer) error {
 	case []uint, []uint32, []uint64, []uint16:
 		return serializeUintArray(v, w)
 
+	case []float32, []float64:
+		return serializeFloatArray(v, w)
+
 	case []string:
 		return serializeStringArray(v, w)
 
