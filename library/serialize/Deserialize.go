@@ -52,8 +52,11 @@ func DeserializeWithHeader(r io.Reader, header byte, out interface{}) error {
 		return deserializeJson(r, header, out)
 	}
 
-	// For structs, use header-aware struct deserialization
+	// For structs, validate that we have a struct type header and use header-aware struct deserialization
 	if outValue.Kind() == reflect.Struct {
+		if headerType != types.Struct {
+			return fmt.Errorf("expected Struct header type for struct value, got %v", types.TypeName(headerType))
+		}
 		return deserializeStruct(r, header, outValue)
 	}
 
@@ -194,6 +197,12 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 
 	case types.Map:
 		if err := deserializeMap(r, header, outValue.Addr().Interface()); err != nil {
+			return err
+		}
+		return nil
+
+	case types.Struct:
+		if err := deserializeStruct(r, header, outValue); err != nil {
 			return err
 		}
 		return nil
