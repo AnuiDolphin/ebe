@@ -1,7 +1,6 @@
 package serialize
 
 import (
-	"bytes"
 	"ebe/types"
 	"ebe/utils"
 	"fmt"
@@ -263,30 +262,30 @@ func writeMapHeader(entryCount int, w io.Writer) error {
 
 // deserializeMap deserializes a map from the EBE format with fast paths for common types
 // The output parameter is already validated by getOutputValue() to be a settable pointer
-func deserializeMap(r io.Reader, out interface{}) error {
+func deserializeMap(r io.Reader, header byte, out interface{}) error {
 
 	// Try fast paths for common map types first
 	switch m := out.(type) {
 	case *map[string]int:
-		return deserializeMapStringInt(r, m)
+		return deserializeMapStringInt(r, header, m)
 	case *map[string]string:
-		return deserializeMapStringString(r, m)
+		return deserializeMapStringString(r, header, m)
 	case *map[string]interface{}:
-		return deserializeMapStringInterface(r, m)
+		return deserializeMapStringInterface(r, header, m)
 	case *map[int]string:
-		return deserializeMapIntString(r, m)
+		return deserializeMapIntString(r, header, m)
 	case *map[string]int32:
-		return deserializeMapStringInt32(r, m)
+		return deserializeMapStringInt32(r, header, m)
 	case *map[string]bool:
-		return deserializeMapStringBool(r, m)
+		return deserializeMapStringBool(r, header, m)
 	default:
 		// Fall back to generic reflection-based approach
-		return deserializeMapGeneric(r, out)
+		return deserializeMapGeneric(r, header, out)
 	}
 }
 
 // deserializeMapGeneric handles arbitrary map types using reflection (fallback)
-func deserializeMapGeneric(r io.Reader, out interface{}) error {
+func deserializeMapGeneric(r io.Reader, header byte, out interface{}) error {
 
 	// Get the map value (already validated as a settable pointer by main Deserialize)
 	mapValue := reflect.ValueOf(out).Elem()
@@ -299,11 +298,9 @@ func deserializeMapGeneric(r io.Reader, out interface{}) error {
 	keyType := mapType.Key()
 	valueType := mapType.Elem()
 	
-	// Read map header
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return fmt.Errorf("failed to read map header: %w", err)
-	}
+	// Parse map header
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 	
 	if headerType != types.Map {
 		return fmt.Errorf("expected Map type, got %v", types.TypeName(headerType))
@@ -311,6 +308,7 @@ func deserializeMapGeneric(r io.Reader, out interface{}) error {
 	
 	// Determine entry count
 	var entryCount uint64
+	var err error
 	if headerValue <= 7 {
 
 		// Small map: count stored in header
@@ -318,7 +316,7 @@ func deserializeMapGeneric(r io.Reader, out interface{}) error {
 	} else if headerValue == 8 {
 
 		// Large map: read count as UInt
-		entryCount, err = deserializeUint(r)
+		entryCount, err = deserializeUintWithHeader(r)
 		if err != nil {
 			return fmt.Errorf("failed to read map entry count: %w", err)
 		}
@@ -358,8 +356,8 @@ func deserializeMapGeneric(r io.Reader, out interface{}) error {
 // Fast path deserialization functions for common map types
 
 // deserializeMapStringInt deserializes map[string]int without reflection
-func deserializeMapStringInt(r io.Reader, out *map[string]int) error {
-	entryCount, err := readMapHeader(r)
+func deserializeMapStringInt(r io.Reader, header byte, out *map[string]int) error {
+	entryCount, err := readMapHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -373,13 +371,21 @@ func deserializeMapStringInt(r io.Reader, out *map[string]int) error {
 	for i := uint64(0); i < entryCount; i++ {
 
 		// Deserialize string key
-		key, err := deserializeString(r)
+		keyHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read key header %d: %w", i, err)
+		}
+		key, err := deserializeString(r, keyHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize string key %d: %w", i, err)
 		}
 		
 		// Deserialize int value
-		value, err := deserializeSint(r)
+		valueHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read value header %d: %w", i, err)
+		}
+		value, err := deserializeSint(r, valueHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize int value %d: %w", i, err)
 		}
@@ -391,9 +397,9 @@ func deserializeMapStringInt(r io.Reader, out *map[string]int) error {
 }
 
 // deserializeMapStringString deserializes map[string]string without reflection
-func deserializeMapStringString(r io.Reader, out *map[string]string) error {
+func deserializeMapStringString(r io.Reader, header byte, out *map[string]string) error {
 
-	entryCount, err := readMapHeader(r)
+	entryCount, err := readMapHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -407,13 +413,21 @@ func deserializeMapStringString(r io.Reader, out *map[string]string) error {
 	for i := uint64(0); i < entryCount; i++ {
 
 		// Deserialize string key
-		key, err := deserializeString(r)
+		keyHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read key header %d: %w", i, err)
+		}
+		key, err := deserializeString(r, keyHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize string key %d: %w", i, err)
 		}
 		
 		// Deserialize string value
-		value, err := deserializeString(r)
+		valueHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read value header %d: %w", i, err)
+		}
+		value, err := deserializeString(r, valueHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize string value %d: %w", i, err)
 		}
@@ -425,9 +439,9 @@ func deserializeMapStringString(r io.Reader, out *map[string]string) error {
 }
 
 // deserializeMapStringInterface deserializes map[string]interface{} with minimal reflection
-func deserializeMapStringInterface(r io.Reader, out *map[string]interface{}) error {
+func deserializeMapStringInterface(r io.Reader, header byte, out *map[string]interface{}) error {
 
-	entryCount, err := readMapHeader(r)
+	entryCount, err := readMapHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -441,7 +455,11 @@ func deserializeMapStringInterface(r io.Reader, out *map[string]interface{}) err
 	for i := uint64(0); i < entryCount; i++ {
 
 		// Deserialize string key
-		key, err := deserializeString(r)
+		keyHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read key header %d: %w", i, err)
+		}
+		key, err := deserializeString(r, keyHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize string key %d: %w", i, err)
 		}
@@ -459,9 +477,9 @@ func deserializeMapStringInterface(r io.Reader, out *map[string]interface{}) err
 }
 
 // deserializeMapIntString deserializes map[int]string without reflection
-func deserializeMapIntString(r io.Reader, out *map[int]string) error {
+func deserializeMapIntString(r io.Reader, header byte, out *map[int]string) error {
 
-	entryCount, err := readMapHeader(r)
+	entryCount, err := readMapHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -475,13 +493,21 @@ func deserializeMapIntString(r io.Reader, out *map[int]string) error {
 	for i := uint64(0); i < entryCount; i++ {
 
 		// Deserialize int key
-		keyVal, err := deserializeSint(r)
+		keyHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read key header %d: %w", i, err)
+		}
+		keyVal, err := deserializeSint(r, keyHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize int key %d: %w", i, err)
 		}
 		
 		// Deserialize string value
-		value, err := deserializeString(r)
+		valueHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read value header %d: %w", i, err)
+		}
+		value, err := deserializeString(r, valueHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize string value %d: %w", i, err)
 		}
@@ -493,9 +519,9 @@ func deserializeMapIntString(r io.Reader, out *map[int]string) error {
 }
 
 // deserializeMapStringInt32 deserializes map[string]int32 without reflection
-func deserializeMapStringInt32(r io.Reader, out *map[string]int32) error {
+func deserializeMapStringInt32(r io.Reader, header byte, out *map[string]int32) error {
 
-	entryCount, err := readMapHeader(r)
+	entryCount, err := readMapHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -508,13 +534,21 @@ func deserializeMapStringInt32(r io.Reader, out *map[string]int32) error {
 	// Read each key-value pair directly
 	for i := uint64(0); i < entryCount; i++ {
 		// Deserialize string key
-		key, err := deserializeString(r)
+		keyHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read key header %d: %w", i, err)
+		}
+		key, err := deserializeString(r, keyHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize string key %d: %w", i, err)
 		}
 		
 		// Deserialize int32 value
-		value, err := deserializeSint(r)
+		valueHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read value header %d: %w", i, err)
+		}
+		value, err := deserializeSint(r, valueHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize int32 value %d: %w", i, err)
 		}
@@ -526,9 +560,9 @@ func deserializeMapStringInt32(r io.Reader, out *map[string]int32) error {
 }
 
 // deserializeMapStringBool deserializes map[string]bool without reflection
-func deserializeMapStringBool(r io.Reader, out *map[string]bool) error {
+func deserializeMapStringBool(r io.Reader, header byte, out *map[string]bool) error {
 
-	entryCount, err := readMapHeader(r)
+	entryCount, err := readMapHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -541,13 +575,21 @@ func deserializeMapStringBool(r io.Reader, out *map[string]bool) error {
 	// Read each key-value pair directly
 	for i := uint64(0); i < entryCount; i++ {
 		// Deserialize string key
-		key, err := deserializeString(r)
+		keyHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read key header %d: %w", i, err)
+		}
+		key, err := deserializeString(r, keyHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize string key %d: %w", i, err)
 		}
 		
 		// Deserialize bool value
-		value, err := deserializeBoolean(r)
+		valueHeader, err := utils.ReadByte(r)
+		if err != nil {
+			return fmt.Errorf("failed to read value header %d: %w", i, err)
+		}
+		value, err := deserializeBoolean(r, valueHeader)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize bool value %d: %w", i, err)
 		}
@@ -559,12 +601,10 @@ func deserializeMapStringBool(r io.Reader, out *map[string]bool) error {
 }
 
 // readMapHeader reads and parses the map header, returning entry count
-func readMapHeader(r io.Reader) (uint64, error) {
+func readMapHeader(r io.Reader, header byte) (uint64, error) {
 
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return 0, fmt.Errorf("failed to read map header: %w", err)
-	}
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 	
 	if headerType != types.Map {
 		return 0, fmt.Errorf("expected Map type, got %v", types.TypeName(headerType))
@@ -572,12 +612,13 @@ func readMapHeader(r io.Reader) (uint64, error) {
 	
 	// Determine entry count
 	var entryCount uint64
+	var err error
 	if headerValue <= 7 {
 		// Small map: count stored in header
 		entryCount = uint64(headerValue)
 	} else if headerValue == 8 {
 		// Large map: read count as UInt
-		entryCount, err = deserializeUint(r)
+		entryCount, err = deserializeUintWithHeader(r)
 		if err != nil {
 			return 0, fmt.Errorf("failed to read map entry count: %w", err)
 		}
@@ -598,49 +639,48 @@ func deserializeInterfaceValue(r io.Reader, out *interface{}) error {
 	}
 	
 	headerType := types.TypeFromHeader(header)
-	headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
 	
 	// Create appropriate concrete type based on header
 	switch headerType {
 
 	case types.UNibble, types.UInt:
 		var value uint64
-		if err := Deserialize(headerReader, &value); err != nil {
+		if err := DeserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.SNibble, types.SInt:
 		var value int64
-		if err := Deserialize(headerReader, &value); err != nil {
+		if err := DeserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.Float:
 		var value float64
-		if err := Deserialize(headerReader, &value); err != nil {
+		if err := DeserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.Boolean:
 		var value bool
-		if err := Deserialize(headerReader, &value); err != nil {
+		if err := DeserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.String:
 		var value string
-		if err := Deserialize(headerReader, &value); err != nil {
+		if err := DeserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.Buffer:
 		var value []byte
-		if err := Deserialize(headerReader, &value); err != nil {
+		if err := DeserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value

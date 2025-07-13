@@ -28,13 +28,10 @@ func serializeString(value string, w io.Writer) error {
 	return err
 }
 
-func deserializeString(r io.Reader) (string, error) {
-	
-	// Read the header using utils.ReadHeader
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return "", fmt.Errorf("failed to read string header: %w", err)
-	}
+// deserializeString deserializes a string with a pre-read header byte
+func deserializeString(r io.Reader, header byte) (string, error) {
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 
 	if headerType != types.String {
 		return "", fmt.Errorf("expected String type, got %v", types.TypeName(headerType))
@@ -44,7 +41,7 @@ func deserializeString(r io.Reader) (string, error) {
 
 	// If the high bit of the length is set, then the length is in the next data type
 	if length&0x08 != 0 {
-		actualLength, err := deserializeUint(r)
+		actualLength, err := deserializeUintWithHeader(r)
 		if err != nil {
 			return "", fmt.Errorf("failed to deserialize string length: %w", err)
 		}

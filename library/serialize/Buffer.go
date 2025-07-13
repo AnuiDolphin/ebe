@@ -31,24 +31,22 @@ func serializeBuffer(value []byte, w io.Writer) error {
 	return err
 }
 
-func deserializeBuffer(r io.Reader) (*bytes.Buffer, error) {
+// deserializeBuffer deserializes a buffer with a pre-read header byte
+func deserializeBuffer(r io.Reader, header byte) (*bytes.Buffer, error) {
 	value := new(bytes.Buffer)
-
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return value, fmt.Errorf("failed to read buffer header: %w", err)
-	}
+	
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 
 	if headerType != types.Buffer {
-		return value, fmt.Errorf("expected Buffer type, got %v", headerType)
+		return value, fmt.Errorf("expected Buffer type, got %v", types.TypeName(headerType))
 	}
 
 	length := uint64(headerValue)
 
 	// If the high bit of the length is set, then the length is in the next data type
 	if length&0x08 != 0 {
-
-		l, err := deserializeUint(r)
+		l, err := deserializeUintWithHeader(r)
 		if err != nil {
 			return value, fmt.Errorf("failed to read buffer length: %w", err)
 		}
@@ -57,7 +55,7 @@ func deserializeBuffer(r io.Reader) (*bytes.Buffer, error) {
 
 	// Read the buffer data
 	data := make([]byte, length)
-	_, err = io.ReadFull(r, data)
+	_, err := io.ReadFull(r, data)
 	if err != nil {
 		return value, fmt.Errorf("failed to read buffer data: %w", err)
 	}

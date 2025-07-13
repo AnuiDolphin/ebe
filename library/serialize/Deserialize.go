@@ -1,7 +1,6 @@
 package serialize
 
 import (
-	"bytes"
 	"ebe/types"
 	"ebe/utils"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 
 // Deserialize reads the serialized type from the header and deserializes into the provided output parameter
 func Deserialize(r io.Reader, out interface{}) error {
-
 	// Validate and get the output value from within the interface{}
 	outValue, err := getOutputValue(out)
 	if err != nil {
@@ -23,26 +21,44 @@ func Deserialize(r io.Reader, out interface{}) error {
 		return nil
 	}
 
-	// Peek at the header type to determine how to deserialize
+	// Read the header byte and delegate to the header-aware version
 	header, err := utils.ReadByte(r)
 	if err != nil {
 		return fmt.Errorf("failed to read header: %w", err)
 	}
+	
+	return DeserializeWithHeader(r, header, out)
+}
+
+// DeserializeWithHeader deserializes data with a pre-read header byte
+func DeserializeWithHeader(r io.Reader, header byte, out interface{}) error {
+
+	// Validate and get the output value from within the interface{}
+	outValue, err := getOutputValue(out)
+	if err != nil {
+		return err
+	}
+
+	// Check if this is an empty struct first
+	if outValue.Kind() == reflect.Struct && isStructEmpty(outValue) {
+		return nil
+	}
+
 	headerType := types.TypeFromHeader(header)
-	headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
 
-	// For JSON, we need to pass the header back into the stream
+	// For JSON, parse with header parameter
+	// This has to happen before struct deserialization so we can handle the JSON type correctly
 	if headerType == types.Json {
-		return deserializeJson(headerReader, out)
+		return deserializeJson(r, header, out)
 	}
 
-	// For structs, pass the header back into the stream
+	// For structs, use header-aware struct deserialization
 	if outValue.Kind() == reflect.Struct {
-		return deserializeStruct(headerReader, outValue)
+		return deserializeStruct(r, header, outValue)
 	}
 
-	// For simple types, pass the header back into the stream
-	return deserializeSimpleType(headerReader, header, outValue)
+	// For simple types, pass the header directly
+	return deserializeSimpleType(r, header, outValue)
 }
 
 // getOutputValue validates the output parameter and returns the reflect.Value to set
@@ -87,7 +103,7 @@ func isStructEmpty(outValue reflect.Value) bool {
 
 // deserializeSimpleType deserializes data from a stream into a simple (non-struct) type
 func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) error {
-	
+
 	headerType := types.TypeFromHeader(header)
 
 	switch headerType {
@@ -111,7 +127,7 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 		return nil
 
 	case types.Boolean:
-		value, err := deserializeBoolean(r)
+		value, err := deserializeBoolean(r, header)
 		if err != nil {
 			return err
 		}
@@ -121,7 +137,7 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 		return nil
 
 	case types.UInt:
-		value, err := deserializeUint(r)
+		value, err := deserializeUint(r, header)
 		if err != nil {
 			return err
 		}
@@ -131,7 +147,7 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 		return nil
 
 	case types.SInt:
-		value, err := deserializeSint(r)
+		value, err := deserializeSint(r, header)
 		if err != nil {
 			return err
 		}
@@ -141,7 +157,7 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 		return nil
 
 	case types.Float:
-		value, err := deserializeFloat(r)
+		value, err := deserializeFloat(r, header)
 		if err != nil {
 			return err
 		}
@@ -151,7 +167,7 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 		return nil
 
 	case types.String:
-		value, err := deserializeString(r)
+		value, err := deserializeString(r, header)
 		if err != nil {
 			return err
 		}
@@ -161,7 +177,7 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 		return nil
 
 	case types.Buffer:
-		value, err := deserializeBuffer(r)
+		value, err := deserializeBuffer(r, header)
 		if err != nil {
 			return err
 		}
@@ -171,13 +187,13 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 		return nil
 
 	case types.Array:
-		if err := deserializeArray(r, outValue.Addr().Interface()); err != nil {
+		if err := deserializeArray(r, header, outValue.Addr().Interface()); err != nil {
 			return err
 		}
 		return nil
 
 	case types.Map:
-		if err := deserializeMap(r, outValue.Addr().Interface()); err != nil {
+		if err := deserializeMap(r, header, outValue.Addr().Interface()); err != nil {
 			return err
 		}
 		return nil
@@ -214,14 +230,10 @@ func DeserializeInt64(r io.Reader) (int64, error) {
 		return int64(value), nil
 
 	case types.SInt:
-		// Put the header back and call deserializeSint
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		return deserializeSint(headerReader)
+		return deserializeSint(r, header)
 
 	case types.UInt:
-		// Put the header back and call deserializeUint
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		uvalue, err := deserializeUint(headerReader)
+		uvalue, err := deserializeUint(r, header)
 		if err != nil {
 			return 0, err
 		}
@@ -251,9 +263,7 @@ func DeserializeUint64(r io.Reader) (uint64, error) {
 		return uint64(value), nil
 
 	case types.UInt:
-		// Put the header back and call deserializeUint
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		return deserializeUint(headerReader)
+		return deserializeUint(r, header)
 
 	case types.SNibble:
 		// Convert SNibble to uint64 if non-negative
@@ -265,9 +275,7 @@ func DeserializeUint64(r io.Reader) (uint64, error) {
 		return uint64(magnitude), nil
 
 	case types.SInt:
-		// Put the header back and call deserializeSint
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		svalue, err := deserializeSint(headerReader)
+		svalue, err := deserializeSint(r, header)
 		if err != nil {
 			return 0, err
 		}
@@ -292,9 +300,7 @@ func DeserializeFloat64(r io.Reader) (float64, error) {
 
 	switch headerType {
 	case types.Float:
-		// Put the header back and call deserializeFloat
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		return deserializeFloat(headerReader)
+		return deserializeFloat(r, header)
 
 	case types.UNibble:
 		value := types.ValueFromHeader(header)
@@ -310,18 +316,14 @@ func DeserializeFloat64(r io.Reader) (float64, error) {
 		return value, nil
 
 	case types.UInt:
-		// Put the header back and call deserializeUint
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		uvalue, err := deserializeUint(headerReader)
+		uvalue, err := deserializeUint(r, header)
 		if err != nil {
 			return 0, err
 		}
 		return float64(uvalue), nil
 
 	case types.SInt:
-		// Put the header back and call deserializeSint
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		svalue, err := deserializeSint(headerReader)
+		svalue, err := deserializeSint(r, header)
 		if err != nil {
 			return 0, err
 		}
@@ -343,9 +345,7 @@ func DeserializeString(r io.Reader) (string, error) {
 
 	switch headerType {
 	case types.String:
-		// Put the header back and call deserializeString
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		return deserializeString(headerReader)
+		return deserializeString(r, header)
 
 	default:
 		return "", fmt.Errorf("cannot deserialize %s as string", types.TypeName(headerType))
@@ -363,9 +363,7 @@ func DeserializeBytes(r io.Reader) ([]byte, error) {
 
 	switch headerType {
 	case types.Buffer:
-		// Put the header back and call deserializeBuffer
-		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
-		buffer, err := deserializeBuffer(headerReader)
+		buffer, err := deserializeBuffer(r, header)
 		if err != nil {
 			return nil, err
 		}

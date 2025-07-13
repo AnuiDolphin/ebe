@@ -32,19 +32,16 @@ func serializeFloat(value float64, writer io.Writer) error {
 	return binary.Write(writer, binary.LittleEndian, float64(value))
 }
 
-func deserializeFloat(r io.Reader) (float64, error) {
-	
-	// Read the header using utils.ReadHeader
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return 0, fmt.Errorf("failed to read float header: %w", err)
-	}
+// deserializeFloat deserializes a float with a pre-read header byte
+func deserializeFloat(r io.Reader, header byte) (float64, error) {
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 
 	length := headerValue
 
 	// Make sure the data is a valid float value
 	if headerType != types.Float {
-		return 0, fmt.Errorf("expected Float type, got %v", headerType)
+		return 0, fmt.Errorf("expected Float type, got %v", types.TypeName(headerType))
 	}
 
 	if length != 4 && length != 8 {

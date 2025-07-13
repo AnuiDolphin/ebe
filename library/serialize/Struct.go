@@ -32,9 +32,10 @@ func serializeStruct(value interface{}, w io.Writer) error {
 	return nil
 }
 
-// deserializeStruct deserializes data from a stream into a struct by deserializing each field in order
-func deserializeStruct(r io.Reader, structValue reflect.Value) error {
+// deserializeStruct deserializes data from a stream into a struct where the first field uses the provided header
+func deserializeStruct(r io.Reader, header byte, structValue reflect.Value) error {
 	structType := structValue.Type()
+	firstField := true
 
 	// Iterate through each field in the struct
 	for i := 0; i < structValue.NumField(); i++ {
@@ -49,8 +50,16 @@ func deserializeStruct(r io.Reader, structValue reflect.Value) error {
 		// Create a pointer to the field for deserialization
 		fieldPtr := field.Addr().Interface()
 
-		// Recursively call Deserialize to deserialize into this field
-		err := Deserialize(r, fieldPtr)
+		var err error
+		if firstField {
+			// For the first exported field, use the provided header
+			err = DeserializeWithHeader(r, header, fieldPtr)
+			firstField = false
+		} else {
+			// For subsequent fields, read their own headers
+			err = Deserialize(r, fieldPtr)
+		}
+		
 		if err != nil {
 			return fmt.Errorf("failed to deserialize field '%s': %w", fieldType.Name, err)
 		}

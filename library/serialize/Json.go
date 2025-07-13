@@ -23,12 +23,8 @@ func serializeJson(jsonMessage json.RawMessage, w io.Writer) error {
 }
 
 // DeserializeJson deserializes JSON data from a stream and unmarshals it into the provided output
-func deserializeJson(r io.Reader, out interface{}) error {
-	// Read the header using utils.ReadHeader
-	headerType, _, err := utils.ReadHeader(r)
-	if err != nil {
-		return fmt.Errorf("failed to read JSON header: %w", err)
-	}
+func deserializeJson(r io.Reader, header byte, out interface{}) error {
+	headerType := types.TypeFromHeader(header)
 
 	// Verify the header type
 	if headerType != types.Json {
@@ -36,7 +32,7 @@ func deserializeJson(r io.Reader, out interface{}) error {
 	}
 
 	// Length always follows as a UInt (no nibble optimization)
-	length, err := deserializeUint(r)
+	length, err := deserializeUintWithHeader(r)
 	if err != nil {
 		return fmt.Errorf("failed to deserialize JSON length: %w", err)
 	}

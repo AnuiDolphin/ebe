@@ -65,13 +65,11 @@ func serializeSint(value int64, writer io.Writer) error {
 	return writeValueBytes(writer, v, length, negative)
 }
 
-func deserializeSint(r io.Reader) (int64, error) {
 
-	// Read the header using utils.ReadHeader
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return 0, fmt.Errorf("failed to read SInt64 header: %w", err)
-	}
+// deserializeSint deserializes a signed integer with a pre-read header byte
+func deserializeSint(r io.Reader, header byte) (int64, error) {
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 
 	length := headerValue
 
@@ -89,12 +87,12 @@ func deserializeSint(r io.Reader) (int64, error) {
 	}
 
 	if headerType != types.SInt {
-		return 0, fmt.Errorf("expected SInt type, got %v", headerType)
+		return 0, fmt.Errorf("expected SInt type, got %v", types.TypeName(headerType))
 	}
 
 	// Read the data bytes
 	data := make([]byte, length)
-	_, err = io.ReadFull(r, data)
+	_, err := io.ReadFull(r, data)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read SInt64 data: %w", err)
 	}

@@ -67,13 +67,10 @@ func serializeUint(value uint64, writer io.Writer) error {
 	return nil
 }
 
-func deserializeUint(r io.Reader) (uint64, error) {
-
-	// Read the header using utils.ReadHeader
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return 0, fmt.Errorf("failed to read UInt64 header: %w", err)
-	}
+// deserializeUint deserializes an unsigned integer with a pre-read header byte
+func deserializeUint(r io.Reader, header byte) (uint64, error) {
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 
 	length := headerValue
 
@@ -84,12 +81,12 @@ func deserializeUint(r io.Reader) (uint64, error) {
 
 	// Make sure the data is a valid integer value
 	if headerType != types.UInt {
-		return 0, fmt.Errorf("expected UInt type, got %v", headerType)
+		return 0, fmt.Errorf("expected UInt type, got %v", types.TypeName(headerType))
 	}
 
 	// Read the data bytes
 	data := make([]byte, length)
-	_, err = io.ReadFull(r, data)
+	_, err := io.ReadFull(r, data)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read UInt64 data: %w", err)
 	}
@@ -102,4 +99,13 @@ func deserializeUint(r io.Reader) (uint64, error) {
 	}
 
 	return value, nil
+}
+
+// deserializeUintWithHeader reads the header byte and delegates to deserializeUint
+func deserializeUintWithHeader(r io.Reader) (uint64, error) {
+	header, err := utils.ReadByte(r)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read header: %w", err)
+	}
+	return deserializeUint(r, header)
 }

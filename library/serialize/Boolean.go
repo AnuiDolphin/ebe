@@ -19,15 +19,12 @@ func serializeBoolean(value bool, w io.Writer) error {
 	return utils.WriteByte(w, b)
 }
 
-func deserializeBoolean(r io.Reader) (bool, error) {
-	// Read the header using utils.ReadHeader
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return false, fmt.Errorf("failed to read boolean header: %w", err)
-	}
+func deserializeBoolean(r io.Reader, header byte) (bool, error) {
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 
 	if headerType != types.Boolean {
-		return false, fmt.Errorf("expected Boolean type, got %v", headerType)
+		return false, fmt.Errorf("expected Boolean type, got %v", types.TypeName(headerType))
 	}
 
 	return headerValue != 0, nil

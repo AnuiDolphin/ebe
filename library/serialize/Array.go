@@ -224,27 +224,27 @@ func serializeStringArray(arr []string, w io.Writer) error {
 	return nil
 }
 
-func deserializeArray(r io.Reader, out interface{}) error {
+func deserializeArray(r io.Reader, header byte, out interface{}) error {
 	// Direct deserialization based on output type
 	switch out.(type) {
 	case *[]int, *[]int32, *[]int64, *[]int8, *[]int16:
-		return deserializeIntArray(r, out)
+		return deserializeIntArray(r, header, out)
 	case *[]uint, *[]uint32, *[]uint64, *[]uint16:
-		return deserializeUintArray(r, out)
+		return deserializeUintArray(r, header, out)
 	case *[]float32, *[]float64:
-		return deserializeFloatArray(r, out)
+		return deserializeFloatArray(r, header, out)
 	case *[]string:
-		return deserializeStringArray(r, out)
+		return deserializeStringArray(r, header, out)
 	default:
 		// Use generic reflection-based deserialization for unsupported types
-		return deserializeArrayGeneric(r, out)
+		return deserializeArrayGeneric(r, header, out)
 	}
 }
 
 // deserializeIntArray performs deserialization for integer arrays
-func deserializeIntArray(r io.Reader, out interface{}) error {
+func deserializeIntArray(r io.Reader, header byte, out interface{}) error {
 	// Read array header and length
-	length, elementType, err := readArrayHeader(r)
+	length, elementType, err := readArrayHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -309,9 +309,9 @@ func deserializeIntArray(r io.Reader, out interface{}) error {
 }
 
 // deserializeUintArray performs deserialization for unsigned integer arrays
-func deserializeUintArray(r io.Reader, out interface{}) error {
+func deserializeUintArray(r io.Reader, header byte, out interface{}) error {
 	// Read array header and length
-	length, elementType, err := readArrayHeader(r)
+	length, elementType, err := readArrayHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -367,9 +367,9 @@ func deserializeUintArray(r io.Reader, out interface{}) error {
 }
 
 // deserializeFloatArray performs deserialization for float arrays
-func deserializeFloatArray(r io.Reader, out interface{}) error {
+func deserializeFloatArray(r io.Reader, header byte, out interface{}) error {
 	// Read array header and length
-	length, elementType, err := readArrayHeader(r)
+	length, elementType, err := readArrayHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -407,9 +407,9 @@ func deserializeFloatArray(r io.Reader, out interface{}) error {
 }
 
 // deserializeStringArray performs deserialization for string arrays
-func deserializeStringArray(r io.Reader, out interface{}) error {
+func deserializeStringArray(r io.Reader, header byte, out interface{}) error {
 	// Read array header and length
-	length, elementType, err := readArrayHeader(r)
+	length, elementType, err := readArrayHeader(r, header)
 	if err != nil {
 		return err
 	}
@@ -438,13 +438,10 @@ func deserializeStringArray(r io.Reader, out interface{}) error {
 }
 
 // deserializeArrayGeneric is the original reflection-based array deserialization
-func deserializeArrayGeneric(r io.Reader, out interface{}) error {
+func deserializeArrayGeneric(r io.Reader, header byte, out interface{}) error {
 
-	// Read the header using utils.ReadHeader
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return fmt.Errorf("failed to read array header: %w", err)
-	}
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 
 	if headerType != types.Array {
 		return fmt.Errorf("expected Array type, got %v", types.TypeName(headerType))
@@ -457,7 +454,7 @@ func deserializeArrayGeneric(r io.Reader, out interface{}) error {
 	if length&0x08 != 0 {
 
 		// Parse the length using deserializeUint64 directly from the reader
-		arrayLength, err := deserializeUint(r)
+		arrayLength, err := deserializeUintWithHeader(r)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize array length: %w", err)
 		}
@@ -536,12 +533,9 @@ func getTypeForReflectType(t reflect.Type) (types.Types, error) {
 }
 
 // readArrayHeader reads and parses the array header, returning length and element type
-func readArrayHeader(r io.Reader) (uint64, types.Types, error) {
-	// Read the header using utils.ReadHeader
-	headerType, headerValue, err := utils.ReadHeader(r)
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to read array header: %w", err)
-	}
+func readArrayHeader(r io.Reader, header byte) (uint64, types.Types, error) {
+	headerType := types.TypeFromHeader(header)
+	headerValue := types.ValueFromHeader(header)
 
 	if headerType != types.Array {
 		return 0, 0, fmt.Errorf("expected Array type, got %v", types.TypeName(headerType))
@@ -551,7 +545,7 @@ func readArrayHeader(r io.Reader) (uint64, types.Types, error) {
 
 	// If the 4th bit of the nibble is set, read the actual length from the next uint
 	if length&0x08 != 0 {
-		arrayLength, err := deserializeUint(r)
+		arrayLength, err := deserializeUintWithHeader(r)
 		if err != nil {
 			return 0, 0, fmt.Errorf("failed to deserialize array length: %w", err)
 		}
