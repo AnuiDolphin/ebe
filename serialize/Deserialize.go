@@ -47,6 +47,7 @@ func Deserialize(r io.Reader, out interface{}) error {
 
 // getOutputValue validates the output parameter and returns the reflect.Value to set
 func getOutputValue(out interface{}) (reflect.Value, error) {
+
 	// Make sure the output parameter is not nil
 	if out == nil {
 		return reflect.Value{}, fmt.Errorf("output parameter cannot be nil")
@@ -86,6 +87,7 @@ func isStructEmpty(outValue reflect.Value) bool {
 
 // deserializeSimpleType deserializes data from a stream into a simple (non-struct) type
 func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) error {
+	
 	headerType := types.TypeFromHeader(header)
 
 	switch headerType {
@@ -170,6 +172,12 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 
 	case types.Array:
 		if err := deserializeArray(r, outValue.Addr().Interface()); err != nil {
+			return err
+		}
+		return nil
+
+	case types.Map:
+		if err := deserializeMap(r, outValue.Addr().Interface()); err != nil {
 			return err
 		}
 		return nil

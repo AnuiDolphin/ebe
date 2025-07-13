@@ -55,7 +55,7 @@ type comprehensiveStruct struct {
 // Struct with unsupported field types
 type unsupportedStruct struct {
 	ValidField uint8
-	MapField   map[string]int // unsupported type
+	FuncField  func() int // unsupported type
 }
 
 func TestStructSerialization(t *testing.T) {
@@ -339,7 +339,7 @@ func TestStructSerializationErrors(t *testing.T) {
 	t.Run("unsupported field type", func(t *testing.T) {
 		value := unsupportedStruct{
 			ValidField: 42,
-			MapField:   map[string]int{"key": 123},
+			FuncField:  func() int { return 42 },
 		}
 		var buf bytes.Buffer
 

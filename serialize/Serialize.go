@@ -86,6 +86,11 @@ func Serialize(value interface{}, w io.Writer) error {
 			return serializeArray(value, w)
 		}
 
+		// Check if it's a map
+		if rv.Kind() == reflect.Map {
+			return serializeMap(value, w)
+		}
+
 		return fmt.Errorf("unsupported type for serialization: %T", value)
 	}
 }

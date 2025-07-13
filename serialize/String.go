@@ -9,6 +9,7 @@ import (
 
 // serializeString serializes a string value to the writer
 func serializeString(value string, w io.Writer) error {
+
 	// Write the string length header
 	var length = len(value)
 
@@ -28,6 +29,7 @@ func serializeString(value string, w io.Writer) error {
 }
 
 func deserializeString(r io.Reader) (string, error) {
+	
 	// Read the header using utils.ReadHeader
 	headerType, headerValue, err := utils.ReadHeader(r)
 	if err != nil {

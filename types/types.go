@@ -14,6 +14,7 @@ const (
 	Buffer  Types = 8
 	Array   Types = 9
 	Json    Types = 10
+	Map     Types = 11
 )
 
 var TypeNames = map[Types]string{
@@ -28,6 +29,7 @@ var TypeNames = map[Types]string{
 	Buffer:  "Buffer",
 	Array:   "Array",
 	Json:    "Json",
+	Map:     "Map",
 }
 
 func TypeName(typeValue Types) string {

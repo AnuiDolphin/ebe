@@ -33,6 +33,7 @@ func serializeFloat(value float64, writer io.Writer) error {
 }
 
 func deserializeFloat(r io.Reader) (float64, error) {
+	
 	// Read the header using utils.ReadHeader
 	headerType, headerValue, err := utils.ReadHeader(r)
 	if err != nil {
