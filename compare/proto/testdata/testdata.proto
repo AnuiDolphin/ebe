@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+package testdata;
+
+option go_package = "ebe/proto/testdata";
+
+// Main test data structure
+message TestData {
+  PrimitiveTypes primitives = 1;
+  CollectionTypes collections = 2;
+  ComplexTypes complex = 3;
+  EdgeCaseTypes edge_cases = 4;
+  RealWorldTypes real_world = 5;
+}
+
+// Primitive data types
+message PrimitiveTypes {
+  uint32 u_int8 = 1;   // uint8 -> uint32 (protobuf has no uint8)
+  uint32 u_int16 = 2;  // uint16 -> uint32
+  uint32 u_int32 = 3;
+  uint64 u_int64 = 4;
+  int32 int8 = 5;      // int8 -> int32 (protobuf has no int8)
+  int32 int16 = 6;     // int16 -> int32
+  int32 int32 = 7;
+  int64 int64 = 8;
+  float float32 = 9;
+  double float64 = 10;
+  bool bool = 11;
+  string string = 12;
+  bytes bytes = 13;
+}
+
+// Collection types
+message CollectionTypes {
+  repeated int32 small_int_array = 1;
+  repeated string small_string_array = 2;
+  repeated int32 medium_int_array = 3;
+  repeated double medium_float_array = 4;
+  repeated int64 large_int_array = 5;
+  repeated string large_string_array = 6;
+  repeated MixedValue mixed_array = 7;
+  repeated IntArray nested_int_array = 8;
+}
+
+// Mixed value type using oneof
+message MixedValue {
+  oneof value {
+    int32 int_value = 1;
+    string string_value = 2;
+    double float_value = 3;
+    bool bool_value = 4;
+    bytes bytes_value = 5;
+  }
+}
+
+// Helper for nested arrays
+message IntArray {
+  repeated int32 values = 1;
+}
+
+// Complex types
+message ComplexTypes {
+  Person person = 1;
+  Company company = 2;
+  repeated Person people = 3;
+  repeated Department departments = 4;
+  repeated StringMapEntry string_map = 5;
+  repeated IntMapEntry int_map = 6;
+}
+
+// Map entries (protobuf map alternative)
+message StringMapEntry {
+  string key = 1;
+  string value = 2;
+}
+
+message IntMapEntry {
+  string key = 1;
+  int32 value = 2;
+}
+
+// Supporting structures
+message Person {
+  uint64 id = 1;
+  string name = 2;
+  string email = 3;
+  int32 age = 4;
+  bool active = 5;
+  repeated string tags = 6;
+  repeated StringMapEntry metadata = 7;
+}
+
+message Company {
+  uint64 id = 1;
+  string name = 2;
+  int32 founded = 3;
+  repeated Person employees = 4;
+  repeated Department departments = 5;
+  double revenue = 6;
+}
+
+message Department {
+  uint32 id = 1;
+  string name = 2;
+  Person manager = 3;
+  double budget = 4;
+  repeated string projects = 5;
+}
+
+// Edge cases
+message EdgeCaseTypes {
+  string empty_string = 1;
+  bytes empty_bytes = 2;
+  repeated int32 empty_array = 3;
+  bytes nil_bytes = 4;
+  string large_string = 5;
+  bytes large_bytes = 6;
+  string unicode_string = 7;
+  string special_chars = 8;
+  int64 max_int64 = 9;
+  int64 min_int64 = 10;
+  uint64 max_uint64 = 11;
+  double small_float = 12;
+  double large_float = 13;
+  double nan_float = 14;
+  double inf_float = 15;
+}
+
+// Real world types
+message RealWorldTypes {
+  UserProfile user_profile = 1;
+  Configuration config = 2;
+  repeated TimeSeriesPoint time_series = 3;
+  repeated LogEntry log_entries = 4;
+  APIResponse api_response = 5;
+}
+
+message UserProfile {
+  uint64 user_id = 1;
+  string username = 2;
+  string full_name = 3;
+  string email = 4;
+  string phone_number = 5;
+  int64 birth_date = 6;  // Unix timestamp
+  repeated MixedMapEntry preferences = 7;
+  repeated uint64 friends = 8;
+  repeated string groups = 9;
+  int64 last_login = 10;  // Unix timestamp
+  bool is_active = 11;
+  bytes profile_pic = 12;
+}
+
+message Configuration {
+  string app_name = 1;
+  string version = 2;
+  string environment = 3;
+  repeated BoolMapEntry features = 4;
+  repeated IntMapEntry limits = 5;
+  repeated string endpoints = 6;
+  repeated IntMapEntry timeouts = 7;
+  bool debug = 8;
+}
+
+message TimeSeriesPoint {
+  int64 timestamp = 1;  // Unix timestamp
+  double value = 2;
+  repeated StringMapEntry tags = 3;
+  string source = 4;
+}
+
+message LogEntry {
+  int64 timestamp = 1;  // Unix timestamp
+  string level = 2;
+  string message = 3;
+  string source = 4;
+  uint32 thread_id = 5;
+  repeated MixedMapEntry data = 6;
+}
+
+message APIResponse {
+  int32 status = 1;
+  string message = 2;
+  MixedValue data = 3;
+  int64 timestamp = 4;  // Unix timestamp
+  string request_id = 5;
+  repeated string errors = 6;
+  repeated MixedMapEntry meta = 7;
+}
+
+// Map entry types for different value types
+message BoolMapEntry {
+  string key = 1;
+  bool value = 2;
+}
+
+message MixedMapEntry {
+  string key = 1;
+  MixedValue value = 2;
+}

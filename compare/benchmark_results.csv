@@ -1,0 +1,2 @@
+TestName,EBESize,ProtobufSize,SizeDifference,SizeRatio,EBETime_ns,ProtobufTime_ns,TimeDifference_ns,TimeRatio,EBEMemory,ProtobufMemory,MemoryDifference,MemoryRatio
+Primitives,79,111,-32,0.711712,4195,2395,1800,1.751566,488,112,376,4.357143

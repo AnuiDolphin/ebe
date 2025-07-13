@@ -1,0 +1,8 @@
+EBE vs Protocol Buffers Serialization Comparison
+================================================
+Iterations: 10, Warmup runs: 3
+Test group: primitives, Output format: csv
+
+=== PRIMITIVE TYPES ===
+Primitives                     | EBE:       79 | PB:      111 | Ratio:  0.71x | Winner: EBE
+Results written to benchmark_results.csv
