@@ -186,3 +186,192 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 		return fmt.Errorf("unsupported type: %s", types.TypeName(headerType))
 	}
 }
+
+// Type-specific deserializers that avoid reflection overhead
+// These provide fast paths for the most commonly used types
+
+// DeserializeInt64 deserializes an int64 value directly without reflection
+func DeserializeInt64(r io.Reader) (int64, error) {
+	header, err := utils.ReadByte(r)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read header: %w", err)
+	}
+
+	headerType := types.TypeFromHeader(header)
+
+	switch headerType {
+	case types.SNibble:
+		var negative = (header & 0x8) != 0
+		var magnitude = header & 0x7
+		value := int64(magnitude)
+		if negative {
+			value = -value
+		}
+		return value, nil
+
+	case types.UNibble:
+		value := types.ValueFromHeader(header)
+		return int64(value), nil
+
+	case types.SInt:
+		// Put the header back and call deserializeSint
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		return deserializeSint(headerReader)
+
+	case types.UInt:
+		// Put the header back and call deserializeUint
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		uvalue, err := deserializeUint(headerReader)
+		if err != nil {
+			return 0, err
+		}
+		// Check for overflow when converting uint64 to int64
+		if uvalue > 9223372036854775807 { // math.MaxInt64
+			return 0, fmt.Errorf("uint64 value %d overflows int64", uvalue)
+		}
+		return int64(uvalue), nil
+
+	default:
+		return 0, fmt.Errorf("cannot deserialize %s as int64", types.TypeName(headerType))
+	}
+}
+
+// DeserializeUint64 deserializes a uint64 value directly without reflection
+func DeserializeUint64(r io.Reader) (uint64, error) {
+	header, err := utils.ReadByte(r)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read header: %w", err)
+	}
+
+	headerType := types.TypeFromHeader(header)
+
+	switch headerType {
+	case types.UNibble:
+		value := types.ValueFromHeader(header)
+		return uint64(value), nil
+
+	case types.UInt:
+		// Put the header back and call deserializeUint
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		return deserializeUint(headerReader)
+
+	case types.SNibble:
+		// Convert SNibble to uint64 if non-negative
+		var negative = (header & 0x8) != 0
+		if negative {
+			return 0, fmt.Errorf("cannot convert negative SNibble to uint64")
+		}
+		var magnitude = header & 0x7
+		return uint64(magnitude), nil
+
+	case types.SInt:
+		// Put the header back and call deserializeSint
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		svalue, err := deserializeSint(headerReader)
+		if err != nil {
+			return 0, err
+		}
+		if svalue < 0 {
+			return 0, fmt.Errorf("cannot convert negative int64 %d to uint64", svalue)
+		}
+		return uint64(svalue), nil
+
+	default:
+		return 0, fmt.Errorf("cannot deserialize %s as uint64", types.TypeName(headerType))
+	}
+}
+
+// DeserializeFloat64 deserializes a float64 value directly without reflection
+func DeserializeFloat64(r io.Reader) (float64, error) {
+	header, err := utils.ReadByte(r)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read header: %w", err)
+	}
+
+	headerType := types.TypeFromHeader(header)
+
+	switch headerType {
+	case types.Float:
+		// Put the header back and call deserializeFloat
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		return deserializeFloat(headerReader)
+
+	case types.UNibble:
+		value := types.ValueFromHeader(header)
+		return float64(value), nil
+
+	case types.SNibble:
+		var negative = (header & 0x8) != 0
+		var magnitude = header & 0x7
+		value := float64(magnitude)
+		if negative {
+			value = -value
+		}
+		return value, nil
+
+	case types.UInt:
+		// Put the header back and call deserializeUint
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		uvalue, err := deserializeUint(headerReader)
+		if err != nil {
+			return 0, err
+		}
+		return float64(uvalue), nil
+
+	case types.SInt:
+		// Put the header back and call deserializeSint
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		svalue, err := deserializeSint(headerReader)
+		if err != nil {
+			return 0, err
+		}
+		return float64(svalue), nil
+
+	default:
+		return 0, fmt.Errorf("cannot deserialize %s as float64", types.TypeName(headerType))
+	}
+}
+
+// DeserializeString deserializes a string value directly without reflection
+func DeserializeString(r io.Reader) (string, error) {
+	header, err := utils.ReadByte(r)
+	if err != nil {
+		return "", fmt.Errorf("failed to read header: %w", err)
+	}
+
+	headerType := types.TypeFromHeader(header)
+
+	switch headerType {
+	case types.String:
+		// Put the header back and call deserializeString
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		return deserializeString(headerReader)
+
+	default:
+		return "", fmt.Errorf("cannot deserialize %s as string", types.TypeName(headerType))
+	}
+}
+
+// DeserializeBytes deserializes a []byte value directly without reflection
+func DeserializeBytes(r io.Reader) ([]byte, error) {
+	header, err := utils.ReadByte(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read header: %w", err)
+	}
+
+	headerType := types.TypeFromHeader(header)
+
+	switch headerType {
+	case types.Buffer:
+		// Put the header back and call deserializeBuffer
+		headerReader := io.MultiReader(bytes.NewReader([]byte{header}), r)
+		buffer, err := deserializeBuffer(headerReader)
+		if err != nil {
+			return nil, err
+		}
+		return buffer.Bytes(), nil
+
+	default:
+		return nil, fmt.Errorf("cannot deserialize %s as []byte", types.TypeName(headerType))
+	}
+}

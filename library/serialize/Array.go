@@ -259,26 +259,26 @@ func deserializeIntArray(r io.Reader, out interface{}) error {
 	case *[]int:
 		*ptr = make([]int, length)
 		for i := 0; i < int(length); i++ {
-			var elem int
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeInt64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize int element %d: %w", i, err)
 			}
-			(*ptr)[i] = elem
+			(*ptr)[i] = int(elem)
 		}
 	case *[]int32:
 		*ptr = make([]int32, length)
 		for i := 0; i < int(length); i++ {
-			var elem int32
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeInt64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize int32 element %d: %w", i, err)
 			}
-			(*ptr)[i] = elem
+			(*ptr)[i] = int32(elem)
 		}
 	case *[]int64:
 		*ptr = make([]int64, length)
 		for i := 0; i < int(length); i++ {
-			var elem int64
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeInt64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize int64 element %d: %w", i, err)
 			}
 			(*ptr)[i] = elem
@@ -286,20 +286,20 @@ func deserializeIntArray(r io.Reader, out interface{}) error {
 	case *[]int8:
 		*ptr = make([]int8, length)
 		for i := 0; i < int(length); i++ {
-			var elem int8
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeInt64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize int8 element %d: %w", i, err)
 			}
-			(*ptr)[i] = elem
+			(*ptr)[i] = int8(elem)
 		}
 	case *[]int16:
 		*ptr = make([]int16, length)
 		for i := 0; i < int(length); i++ {
-			var elem int16
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeInt64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize int16 element %d: %w", i, err)
 			}
-			(*ptr)[i] = elem
+			(*ptr)[i] = int16(elem)
 		}
 	default:
 		return fmt.Errorf("unsupported integer array type: %T", out)
@@ -326,26 +326,26 @@ func deserializeUintArray(r io.Reader, out interface{}) error {
 	case *[]uint:
 		*ptr = make([]uint, length)
 		for i := 0; i < int(length); i++ {
-			var elem uint
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeUint64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize uint element %d: %w", i, err)
 			}
-			(*ptr)[i] = elem
+			(*ptr)[i] = uint(elem)
 		}
 	case *[]uint32:
 		*ptr = make([]uint32, length)
 		for i := 0; i < int(length); i++ {
-			var elem uint32
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeUint64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize uint32 element %d: %w", i, err)
 			}
-			(*ptr)[i] = elem
+			(*ptr)[i] = uint32(elem)
 		}
 	case *[]uint64:
 		*ptr = make([]uint64, length)
 		for i := 0; i < int(length); i++ {
-			var elem uint64
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeUint64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize uint64 element %d: %w", i, err)
 			}
 			(*ptr)[i] = elem
@@ -353,11 +353,11 @@ func deserializeUintArray(r io.Reader, out interface{}) error {
 	case *[]uint16:
 		*ptr = make([]uint16, length)
 		for i := 0; i < int(length); i++ {
-			var elem uint16
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeUint64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize uint16 element %d: %w", i, err)
 			}
-			(*ptr)[i] = elem
+			(*ptr)[i] = uint16(elem)
 		}
 	default:
 		return fmt.Errorf("unsupported unsigned integer array type: %T", out)
@@ -384,17 +384,17 @@ func deserializeFloatArray(r io.Reader, out interface{}) error {
 	case *[]float32:
 		*ptr = make([]float32, length)
 		for i := 0; i < int(length); i++ {
-			var elem float32
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeFloat64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize float32 element %d: %w", i, err)
 			}
-			(*ptr)[i] = elem
+			(*ptr)[i] = float32(elem)
 		}
 	case *[]float64:
 		*ptr = make([]float64, length)
 		for i := 0; i < int(length); i++ {
-			var elem float64
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeFloat64(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize float64 element %d: %w", i, err)
 			}
 			(*ptr)[i] = elem
@@ -424,8 +424,8 @@ func deserializeStringArray(r io.Reader, out interface{}) error {
 	case *[]string:
 		*ptr = make([]string, length)
 		for i := 0; i < int(length); i++ {
-			var elem string
-			if err := Deserialize(r, &elem); err != nil {
+			elem, err := DeserializeString(r)
+			if err != nil {
 				return fmt.Errorf("failed to deserialize string element %d: %w", i, err)
 			}
 			(*ptr)[i] = elem
