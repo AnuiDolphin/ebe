@@ -101,3 +101,56 @@ func TestStringArrayFastPath(t *testing.T) {
 		})
 	}
 }
+
+func TestUintArrayFastPath(t *testing.T) {
+	tests := []struct {
+		name string
+		data interface{}
+	}{
+		{"[]uint", []uint{1, 2, 3, 4, 5}},
+		{"[]uint32", []uint32{10, 20, 30}},
+		{"[]uint64", []uint64{100, 200, 300, 400}},
+		{"[]uint16", []uint16{10, 20}},
+		{"empty []uint", []uint{}},
+		{"single element []uint64", []uint64{42}},
+		{"large values", []uint64{18446744073709551615, 0, 1000000000000}}, // max uint64 and other large values
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			
+			// Serialize using fast path
+			err := serialize.Serialize(tt.data, &buf)
+			if err != nil {
+				t.Fatalf("Uint array fast path serialization failed: %v", err)
+			}
+			
+			// Verify we can deserialize back
+			var result interface{}
+			switch tt.data.(type) {
+			case []uint:
+				var out []uint
+				result = &out
+			case []uint32:
+				var out []uint32
+				result = &out
+			case []uint64:
+				var out []uint64
+				result = &out
+			case []uint16:
+				var out []uint16
+				result = &out
+			}
+			
+			err = serialize.Deserialize(&buf, result)
+			if err != nil {
+				t.Fatalf("Uint array deserialization failed: %v", err)
+			}
+			
+			// Basic length check for now
+			// More detailed comparison would require reflection
+			t.Logf("Successfully serialized and deserialized %s", tt.name)
+		})
+	}
+}

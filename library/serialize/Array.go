@@ -148,6 +148,65 @@ func serializeStringArray(arr []string, w io.Writer) error {
 	return nil
 }
 
+// Fast path serialization for unsigned integer arrays - avoids reflection overhead
+func serializeUintArray(arr interface{}, w io.Writer) error {
+	var length int
+	var elementType types.Types
+
+	// Handle different unsigned integer slice types
+	switch v := arr.(type) {
+	case []uint:
+		length = len(v)
+		elementType = types.UInt
+	case []uint32:
+		length = len(v)
+		elementType = types.UInt
+	case []uint64:
+		length = len(v)
+		elementType = types.UInt
+	case []uint16:
+		length = len(v)
+		elementType = types.UInt
+	default:
+		return fmt.Errorf("unsupported unsigned integer array type: %T", arr)
+	}
+
+	// Write the array header
+	if err := writeArrayHeader(w, length, elementType); err != nil {
+		return err
+	}
+
+	// Serialize each element directly without reflection
+	switch v := arr.(type) {
+	case []uint:
+		for _, elem := range v {
+			if err := serializeUint(uint64(elem), w); err != nil {
+				return fmt.Errorf("failed to serialize uint element: %w", err)
+			}
+		}
+	case []uint32:
+		for _, elem := range v {
+			if err := serializeUint(uint64(elem), w); err != nil {
+				return fmt.Errorf("failed to serialize uint32 element: %w", err)
+			}
+		}
+	case []uint64:
+		for _, elem := range v {
+			if err := serializeUint(elem, w); err != nil {
+				return fmt.Errorf("failed to serialize uint64 element: %w", err)
+			}
+		}
+	case []uint16:
+		for _, elem := range v {
+			if err := serializeUint(uint64(elem), w); err != nil {
+				return fmt.Errorf("failed to serialize uint16 element: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func deserializeArray(r io.Reader, out interface{}) error {
 
 	// Read the header using utils.ReadHeader
