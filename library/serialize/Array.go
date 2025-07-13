@@ -225,6 +225,220 @@ func serializeStringArray(arr []string, w io.Writer) error {
 }
 
 func deserializeArray(r io.Reader, out interface{}) error {
+	// Direct deserialization based on output type
+	switch out.(type) {
+	case *[]int, *[]int32, *[]int64, *[]int8, *[]int16:
+		return deserializeIntArray(r, out)
+	case *[]uint, *[]uint32, *[]uint64, *[]uint16:
+		return deserializeUintArray(r, out)
+	case *[]float32, *[]float64:
+		return deserializeFloatArray(r, out)
+	case *[]string:
+		return deserializeStringArray(r, out)
+	default:
+		// Use generic reflection-based deserialization for unsupported types
+		return deserializeArrayGeneric(r, out)
+	}
+}
+
+// deserializeIntArray performs deserialization for integer arrays
+func deserializeIntArray(r io.Reader, out interface{}) error {
+	// Read array header and length
+	length, elementType, err := readArrayHeader(r)
+	if err != nil {
+		return err
+	}
+
+	// Verify element type is SInt
+	if elementType != types.SInt {
+		return fmt.Errorf("expected SInt element type, got %v", types.TypeName(elementType))
+	}
+
+	// Type switch to handle different integer slice types
+	switch ptr := out.(type) {
+	case *[]int:
+		*ptr = make([]int, length)
+		for i := 0; i < int(length); i++ {
+			var elem int
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize int element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	case *[]int32:
+		*ptr = make([]int32, length)
+		for i := 0; i < int(length); i++ {
+			var elem int32
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize int32 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	case *[]int64:
+		*ptr = make([]int64, length)
+		for i := 0; i < int(length); i++ {
+			var elem int64
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize int64 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	case *[]int8:
+		*ptr = make([]int8, length)
+		for i := 0; i < int(length); i++ {
+			var elem int8
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize int8 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	case *[]int16:
+		*ptr = make([]int16, length)
+		for i := 0; i < int(length); i++ {
+			var elem int16
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize int16 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	default:
+		return fmt.Errorf("unsupported integer array type: %T", out)
+	}
+
+	return nil
+}
+
+// deserializeUintArray performs deserialization for unsigned integer arrays
+func deserializeUintArray(r io.Reader, out interface{}) error {
+	// Read array header and length
+	length, elementType, err := readArrayHeader(r)
+	if err != nil {
+		return err
+	}
+
+	// Verify element type is UInt
+	if elementType != types.UInt {
+		return fmt.Errorf("expected UInt element type, got %v", types.TypeName(elementType))
+	}
+
+	// Type switch to handle different unsigned integer slice types
+	switch ptr := out.(type) {
+	case *[]uint:
+		*ptr = make([]uint, length)
+		for i := 0; i < int(length); i++ {
+			var elem uint
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize uint element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	case *[]uint32:
+		*ptr = make([]uint32, length)
+		for i := 0; i < int(length); i++ {
+			var elem uint32
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize uint32 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	case *[]uint64:
+		*ptr = make([]uint64, length)
+		for i := 0; i < int(length); i++ {
+			var elem uint64
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize uint64 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	case *[]uint16:
+		*ptr = make([]uint16, length)
+		for i := 0; i < int(length); i++ {
+			var elem uint16
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize uint16 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	default:
+		return fmt.Errorf("unsupported unsigned integer array type: %T", out)
+	}
+
+	return nil
+}
+
+// deserializeFloatArray performs deserialization for float arrays
+func deserializeFloatArray(r io.Reader, out interface{}) error {
+	// Read array header and length
+	length, elementType, err := readArrayHeader(r)
+	if err != nil {
+		return err
+	}
+
+	// Verify element type is Float
+	if elementType != types.Float {
+		return fmt.Errorf("expected Float element type, got %v", types.TypeName(elementType))
+	}
+
+	// Type switch to handle different float slice types
+	switch ptr := out.(type) {
+	case *[]float32:
+		*ptr = make([]float32, length)
+		for i := 0; i < int(length); i++ {
+			var elem float32
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize float32 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	case *[]float64:
+		*ptr = make([]float64, length)
+		for i := 0; i < int(length); i++ {
+			var elem float64
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize float64 element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	default:
+		return fmt.Errorf("unsupported float array type: %T", out)
+	}
+
+	return nil
+}
+
+// deserializeStringArray performs deserialization for string arrays
+func deserializeStringArray(r io.Reader, out interface{}) error {
+	// Read array header and length
+	length, elementType, err := readArrayHeader(r)
+	if err != nil {
+		return err
+	}
+
+	// Verify element type is String
+	if elementType != types.String {
+		return fmt.Errorf("expected String element type, got %v", types.TypeName(elementType))
+	}
+
+	// Type switch to handle string slice
+	switch ptr := out.(type) {
+	case *[]string:
+		*ptr = make([]string, length)
+		for i := 0; i < int(length); i++ {
+			var elem string
+			if err := Deserialize(r, &elem); err != nil {
+				return fmt.Errorf("failed to deserialize string element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	default:
+		return fmt.Errorf("unsupported string array type: %T", out)
+	}
+
+	return nil
+}
+
+// deserializeArrayGeneric is the original reflection-based array deserialization
+func deserializeArrayGeneric(r io.Reader, out interface{}) error {
 
 	// Read the header using utils.ReadHeader
 	headerType, headerValue, err := utils.ReadHeader(r)
@@ -319,6 +533,39 @@ func getTypeForReflectType(t reflect.Type) (types.Types, error) {
 	default:
 		return 0, fmt.Errorf("unsupported type: %v", t)
 	}
+}
+
+// readArrayHeader reads and parses the array header, returning length and element type
+func readArrayHeader(r io.Reader) (uint64, types.Types, error) {
+	// Read the header using utils.ReadHeader
+	headerType, headerValue, err := utils.ReadHeader(r)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read array header: %w", err)
+	}
+
+	if headerType != types.Array {
+		return 0, 0, fmt.Errorf("expected Array type, got %v", types.TypeName(headerType))
+	}
+
+	length := uint64(headerValue)
+
+	// If the 4th bit of the nibble is set, read the actual length from the next uint
+	if length&0x08 != 0 {
+		arrayLength, err := deserializeUint(r)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to deserialize array length: %w", err)
+		}
+		length = arrayLength
+	}
+
+	// Read the element type
+	elementTypeByte, err := utils.ReadByte(r)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read element type: %w", err)
+	}
+	elementType := types.Types(elementTypeByte)
+
+	return length, elementType, nil
 }
 
 // writeArrayHeader writes the array header with length and element type
