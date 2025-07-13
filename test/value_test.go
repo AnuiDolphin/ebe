@@ -2,9 +2,9 @@ package main_test
 
 import (
 	"bytes"
-	"ebe/serialize"
-	"ebe/types"
-	"ebe/utils"
+	"ebe-library/serialize"
+	"ebe-library/types"
+	"ebe-library/utils"
 	"fmt"
 	"math"
 	"reflect"

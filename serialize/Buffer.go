@@ -2,8 +2,8 @@ package serialize
 
 import (
 	"bytes"
-	"ebe/types"
-	"ebe/utils"
+	"ebe-library/types"
+	"ebe-library/utils"
 	"fmt"
 	"io"
 )

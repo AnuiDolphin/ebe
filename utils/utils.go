@@ -2,7 +2,7 @@ package utils
 
 import (
 	"bytes"
-	"ebe/types"
+	"ebe-library/types"
 	"fmt"
 	"io"
 	"math"

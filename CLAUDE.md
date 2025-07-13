@@ -8,8 +8,8 @@ This is EBE (Efficient Binary Encoding), a Go library for compact binary seriali
 
 ## Project Structure
 
-- **Main EBE Library**: `/Users/craigsymonds/dev/ebe/` - Core serialization library (no external dependencies)
-- **Comparison Tool**: `/Users/craigsymonds/dev/ebe-compare/` - Standalone application comparing EBE vs Protocol Buffers performance
+- **Main EBE Library**: `/Users/craigsymonds/dev/ebe/library/` - Core serialization library (no external dependencies)
+- **Comparison Tool**: `/Users/craigsymonds/dev/ebe/` - Standalone application comparing EBE vs Protocol Buffers performance
 
 ## Development Commands
 
@@ -29,7 +29,7 @@ go mod tidy                     # Clean up dependencies
 
 ### Module Management
 ```bash
-go mod init ebe                 # Initialize module (already done)
+go mod init ebe-library         # Initialize module (already done)
 go mod download                 # Download dependencies
 ```
 
