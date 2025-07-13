@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	"ebe-library/serialize"
+	"ebe/serialize"
 	"google.golang.org/protobuf/proto"
 )
 

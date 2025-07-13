@@ -1,3 +1,3 @@
-module ebe-library
+module ebe
 
 go 1.23.1

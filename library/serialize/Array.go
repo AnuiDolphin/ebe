@@ -1,8 +1,8 @@
 package serialize
 
 import (
-	"ebe-library/types"
-	"ebe-library/utils"
+	"ebe/types"
+	"ebe/utils"
 	"fmt"
 	"io"
 	"reflect"

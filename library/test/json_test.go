@@ -2,7 +2,7 @@ package main_test
 
 import (
 	"bytes"
-	"ebe-library/serialize"
+	"ebe/serialize"
 	"encoding/json"
 	"testing"
 )

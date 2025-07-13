@@ -2,8 +2,8 @@ package main_test
 
 import (
 	"bytes"
-	"ebe-library/serialize"
-	"ebe-library/utils"
+	"ebe/serialize"
+	"ebe/utils"
 	"testing"
 )
 
