@@ -60,7 +60,7 @@ func Serialize(value interface{}, w io.Writer) error {
 	case []string:
 		return serializeStringArray(v, w)
 	case []bool:
-		return serializeArray(reflect.ValueOf(v), w)
+		return serializeBoolArray(v, w)
 
 	// Map types (non-pointer)
 	case map[string]int:

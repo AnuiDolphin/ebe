@@ -224,6 +224,26 @@ func serializeStringArray(arr []string, w io.Writer) error {
 	return nil
 }
 
+// Fast path serialization for boolean arrays - avoids reflection overhead
+func serializeBoolArray(arr []bool, w io.Writer) error {
+	length := len(arr)
+	elementType := types.Boolean
+
+	// Write the array header
+	if err := writeArrayHeader(w, length, elementType); err != nil {
+		return err
+	}
+
+	// Serialize each boolean element directly without reflection
+	for _, elem := range arr {
+		if err := serializeBoolean(elem, w); err != nil {
+			return fmt.Errorf("failed to serialize bool element: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func deserializeArray(r io.Reader, header byte, out interface{}) error {
 	// Direct deserialization based on output type
 	switch out.(type) {
@@ -235,6 +255,8 @@ func deserializeArray(r io.Reader, header byte, out interface{}) error {
 		return deserializeFloatArray(r, header, out)
 	case *[]string:
 		return deserializeStringArray(r, header, out)
+	case *[]bool:
+		return deserializeBoolArray(r, header, out)
 	default:
 		// Use generic reflection-based deserialization for unsupported types
 		return deserializeArrayGeneric(r, header, out)
@@ -432,6 +454,41 @@ func deserializeStringArray(r io.Reader, header byte, out interface{}) error {
 		}
 	default:
 		return fmt.Errorf("unsupported string array type: %T", out)
+	}
+
+	return nil
+}
+
+// deserializeBoolArray performs deserialization for boolean arrays
+func deserializeBoolArray(r io.Reader, header byte, out interface{}) error {
+	// Read array header and length
+	length, elementType, err := readArrayHeader(r, header)
+	if err != nil {
+		return err
+	}
+
+	// Verify element type is Boolean
+	if elementType != types.Boolean {
+		return fmt.Errorf("expected Boolean element type, got %v", types.TypeName(elementType))
+	}
+
+	// Type switch to handle boolean slice
+	switch ptr := out.(type) {
+	case *[]bool:
+		*ptr = make([]bool, length)
+		for i := 0; i < int(length); i++ {
+			header, err := utils.ReadByte(r)
+			if err != nil {
+				return fmt.Errorf("failed to read bool element %d header: %w", i, err)
+			}
+			elem, err := deserializeBoolean(r, header)
+			if err != nil {
+				return fmt.Errorf("failed to deserialize bool element %d: %w", i, err)
+			}
+			(*ptr)[i] = elem
+		}
+	default:
+		return fmt.Errorf("unsupported boolean array type: %T", out)
 	}
 
 	return nil
