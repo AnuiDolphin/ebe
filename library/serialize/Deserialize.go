@@ -217,8 +217,8 @@ func deserializeSimpleType(r io.Reader, header byte, outValue reflect.Value) err
 // Type-specific deserializers that avoid reflection overhead
 // These provide fast paths for the most commonly used types
 
-// DeserializeInt64 deserializes an int64 value directly without reflection
-func DeserializeInt64(r io.Reader) (int64, error) {
+// deserializeInt64 deserializes an int64 value directly without reflection
+func deserializeInt64(r io.Reader) (int64, error) {
 	header, err := utils.ReadByte(r)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read header: %w", err)
@@ -259,8 +259,8 @@ func DeserializeInt64(r io.Reader) (int64, error) {
 	}
 }
 
-// DeserializeUint64 deserializes a uint64 value directly without reflection
-func DeserializeUint64(r io.Reader) (uint64, error) {
+// deserializeUint64 deserializes a uint64 value directly without reflection
+func deserializeUint64(r io.Reader) (uint64, error) {
 	header, err := utils.ReadByte(r)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read header: %w", err)
@@ -300,8 +300,8 @@ func DeserializeUint64(r io.Reader) (uint64, error) {
 	}
 }
 
-// DeserializeFloat64 deserializes a float64 value directly without reflection
-func DeserializeFloat64(r io.Reader) (float64, error) {
+// deserializeFloat64 deserializes a float64 value directly without reflection
+func deserializeFloat64(r io.Reader) (float64, error) {
 	header, err := utils.ReadByte(r)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read header: %w", err)
@@ -345,42 +345,4 @@ func DeserializeFloat64(r io.Reader) (float64, error) {
 	}
 }
 
-// DeserializeString deserializes a string value directly without reflection
-func DeserializeString(r io.Reader) (string, error) {
-	header, err := utils.ReadByte(r)
-	if err != nil {
-		return "", fmt.Errorf("failed to read header: %w", err)
-	}
 
-	headerType := types.TypeFromHeader(header)
-
-	switch headerType {
-	case types.String:
-		return deserializeString(r, header)
-
-	default:
-		return "", fmt.Errorf("cannot deserialize %s as string", types.TypeName(headerType))
-	}
-}
-
-// DeserializeBytes deserializes a []byte value directly without reflection
-func DeserializeBytes(r io.Reader) ([]byte, error) {
-	header, err := utils.ReadByte(r)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read header: %w", err)
-	}
-
-	headerType := types.TypeFromHeader(header)
-
-	switch headerType {
-	case types.Buffer:
-		buffer, err := deserializeBuffer(r, header)
-		if err != nil {
-			return nil, err
-		}
-		return buffer.Bytes(), nil
-
-	default:
-		return nil, fmt.Errorf("cannot deserialize %s as []byte", types.TypeName(headerType))
-	}
-}

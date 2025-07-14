@@ -259,7 +259,7 @@ func deserializeIntArray(r io.Reader, header byte, out interface{}) error {
 	case *[]int:
 		*ptr = make([]int, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeInt64(r)
+			elem, err := deserializeInt64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize int element %d: %w", i, err)
 			}
@@ -268,7 +268,7 @@ func deserializeIntArray(r io.Reader, header byte, out interface{}) error {
 	case *[]int32:
 		*ptr = make([]int32, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeInt64(r)
+			elem, err := deserializeInt64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize int32 element %d: %w", i, err)
 			}
@@ -277,7 +277,7 @@ func deserializeIntArray(r io.Reader, header byte, out interface{}) error {
 	case *[]int64:
 		*ptr = make([]int64, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeInt64(r)
+			elem, err := deserializeInt64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize int64 element %d: %w", i, err)
 			}
@@ -286,7 +286,7 @@ func deserializeIntArray(r io.Reader, header byte, out interface{}) error {
 	case *[]int8:
 		*ptr = make([]int8, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeInt64(r)
+			elem, err := deserializeInt64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize int8 element %d: %w", i, err)
 			}
@@ -295,7 +295,7 @@ func deserializeIntArray(r io.Reader, header byte, out interface{}) error {
 	case *[]int16:
 		*ptr = make([]int16, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeInt64(r)
+			elem, err := deserializeInt64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize int16 element %d: %w", i, err)
 			}
@@ -326,7 +326,7 @@ func deserializeUintArray(r io.Reader, header byte, out interface{}) error {
 	case *[]uint:
 		*ptr = make([]uint, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeUint64(r)
+			elem, err := deserializeUint64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize uint element %d: %w", i, err)
 			}
@@ -335,7 +335,7 @@ func deserializeUintArray(r io.Reader, header byte, out interface{}) error {
 	case *[]uint32:
 		*ptr = make([]uint32, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeUint64(r)
+			elem, err := deserializeUint64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize uint32 element %d: %w", i, err)
 			}
@@ -344,7 +344,7 @@ func deserializeUintArray(r io.Reader, header byte, out interface{}) error {
 	case *[]uint64:
 		*ptr = make([]uint64, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeUint64(r)
+			elem, err := deserializeUint64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize uint64 element %d: %w", i, err)
 			}
@@ -353,7 +353,7 @@ func deserializeUintArray(r io.Reader, header byte, out interface{}) error {
 	case *[]uint16:
 		*ptr = make([]uint16, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeUint64(r)
+			elem, err := deserializeUint64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize uint16 element %d: %w", i, err)
 			}
@@ -384,7 +384,7 @@ func deserializeFloatArray(r io.Reader, header byte, out interface{}) error {
 	case *[]float32:
 		*ptr = make([]float32, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeFloat64(r)
+			elem, err := deserializeFloat64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize float32 element %d: %w", i, err)
 			}
@@ -393,7 +393,7 @@ func deserializeFloatArray(r io.Reader, header byte, out interface{}) error {
 	case *[]float64:
 		*ptr = make([]float64, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeFloat64(r)
+			elem, err := deserializeFloat64(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize float64 element %d: %w", i, err)
 			}
@@ -424,7 +424,7 @@ func deserializeStringArray(r io.Reader, header byte, out interface{}) error {
 	case *[]string:
 		*ptr = make([]string, length)
 		for i := 0; i < int(length); i++ {
-			elem, err := DeserializeString(r)
+			elem, err := deserializeStringWithoutHeader(r)
 			if err != nil {
 				return fmt.Errorf("failed to deserialize string element %d: %w", i, err)
 			}
@@ -560,6 +560,24 @@ func readArrayHeader(r io.Reader, header byte) (uint64, types.Types, error) {
 	elementType := types.Types(elementTypeByte)
 
 	return length, elementType, nil
+}
+
+// deserializeStringWithoutHeader deserializes a string value directly without reflection
+func deserializeStringWithoutHeader(r io.Reader) (string, error) {
+	header, err := utils.ReadByte(r)
+	if err != nil {
+		return "", fmt.Errorf("failed to read header: %w", err)
+	}
+
+	headerType := types.TypeFromHeader(header)
+
+	switch headerType {
+	case types.String:
+		return deserializeString(r, header)
+
+	default:
+		return "", fmt.Errorf("cannot deserialize %s as string", types.TypeName(headerType))
+	}
 }
 
 // writeArrayHeader writes the array header with length and element type
