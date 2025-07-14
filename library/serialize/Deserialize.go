@@ -10,28 +10,29 @@ import (
 
 // Deserialize reads the serialized type from the header and deserializes into the provided output parameter
 func Deserialize(r io.Reader, out interface{}) error {
+	
 	// Validate and get the output value from within the interface{}
 	outValue, err := getOutputValue(out)
 	if err != nil {
 		return err
 	}
 
-	// Check if this is an empty struct first (before reading header)
+	// Check if this is an empty struct first - they serialize to 0 bytes (no header)
 	if outValue.Kind() == reflect.Struct && isStructEmpty(outValue) {
 		return nil
 	}
-
-	// Read the header byte and delegate to the header-aware version
+	
+	// Read the header byte and delegate to the internal deserializer
 	header, err := utils.ReadByte(r)
 	if err != nil {
 		return fmt.Errorf("failed to read header: %w", err)
 	}
 	
-	return DeserializeWithHeader(r, header, out)
+	return deserializeWithHeaderInternal(r, header, out, outValue)
 }
 
-// DeserializeWithHeader deserializes data with a pre-read header byte
-func DeserializeWithHeader(r io.Reader, header byte, out interface{}) error {
+// deserializeWithHeader deserializes data with a pre-read header byte (internal use only)
+func deserializeWithHeader(r io.Reader, header byte, out interface{}) error {
 
 	// Validate and get the output value from within the interface{}
 	outValue, err := getOutputValue(out)
@@ -39,11 +40,12 @@ func DeserializeWithHeader(r io.Reader, header byte, out interface{}) error {
 		return err
 	}
 
-	// Check if this is an empty struct first
-	if outValue.Kind() == reflect.Struct && isStructEmpty(outValue) {
-		return nil
-	}
+	return deserializeWithHeaderInternal(r, header, out, outValue)
+}
 
+// deserializeWithHeaderInternal performs the actual deserialization with pre-validated outValue
+func deserializeWithHeaderInternal(r io.Reader, header byte, out interface{}, outValue reflect.Value) error {
+	
 	headerType := types.TypeFromHeader(header)
 
 	// For JSON, parse with header parameter

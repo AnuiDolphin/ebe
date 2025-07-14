@@ -645,42 +645,42 @@ func deserializeInterfaceValue(r io.Reader, out *interface{}) error {
 
 	case types.UNibble, types.UInt:
 		var value uint64
-		if err := DeserializeWithHeader(r, header, &value); err != nil {
+		if err := deserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.SNibble, types.SInt:
 		var value int64
-		if err := DeserializeWithHeader(r, header, &value); err != nil {
+		if err := deserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.Float:
 		var value float64
-		if err := DeserializeWithHeader(r, header, &value); err != nil {
+		if err := deserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.Boolean:
 		var value bool
-		if err := DeserializeWithHeader(r, header, &value); err != nil {
+		if err := deserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.String:
 		var value string
-		if err := DeserializeWithHeader(r, header, &value); err != nil {
+		if err := deserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
 
 	case types.Buffer:
 		var value []byte
-		if err := DeserializeWithHeader(r, header, &value); err != nil {
+		if err := deserializeWithHeader(r, header, &value); err != nil {
 			return err
 		}
 		*out = value
