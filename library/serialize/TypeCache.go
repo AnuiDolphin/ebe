@@ -9,9 +9,10 @@ import (
 
 // typeCache provides concurrent-safe caching of reflection metadata
 var typeCache = &TypeCache{
-	typeToEBEType: &sync.Map{},
-	structFields:  &sync.Map{},
-	elementTypes:  &sync.Map{},
+	typeToEBEType:    &sync.Map{},
+	structFields:     &sync.Map{},
+	elementTypes:     &sync.Map{},
+	outputValidation: &sync.Map{},
 }
 
 // TypeCache holds cached reflection metadata to avoid repeated expensive operations
@@ -24,6 +25,9 @@ type TypeCache struct {
 	
 	// elementTypes caches array/slice element types
 	elementTypes *sync.Map
+	
+	// outputValidation caches validation results for deserialization output parameters
+	outputValidation *sync.Map
 }
 
 // StructFieldInfo contains cached information about a struct field
@@ -38,6 +42,14 @@ type StructFieldInfo struct {
 type StructInfo struct {
 	Fields []StructFieldInfo
 	Empty  bool // True if struct has no exported fields
+}
+
+// OutputValidationInfo contains cached validation results for output parameters
+type OutputValidationInfo struct {
+	IsValidPointer bool
+	IsSettable     bool
+	ElementKind    reflect.Kind
+	Error          error
 }
 
 // GetEBEType returns the cached EBE type for a reflect.Type, computing and caching if not found
@@ -194,9 +206,57 @@ func computeElementType(t reflect.Type) (types.Types, error) {
 	}
 }
 
+// GetOutputValidation returns cached validation info for an output parameter type
+func (tc *TypeCache) GetOutputValidation(t reflect.Type) *OutputValidationInfo {
+	// Try to get from cache first
+	if cached, found := tc.outputValidation.Load(t); found {
+		return cached.(*OutputValidationInfo)
+	}
+	
+	// Compute validation info
+	validationInfo := computeOutputValidation(t)
+	
+	// Cache the result
+	tc.outputValidation.Store(t, validationInfo)
+	return validationInfo
+}
+
+// computeOutputValidation computes validation info for an output parameter type
+func computeOutputValidation(t reflect.Type) *OutputValidationInfo {
+	// Check if it's a pointer
+	if t.Kind() != reflect.Ptr {
+		return &OutputValidationInfo{
+			IsValidPointer: false,
+			IsSettable:     false,
+			ElementKind:    t.Kind(),
+			Error:          fmt.Errorf("output parameter must be a pointer"),
+		}
+	}
+	
+	// Get element type
+	elemType := t.Elem()
+	
+	// Check settability - in Go, all elements of pointers to concrete types are settable
+	// unless they're interfaces to nil or other special cases
+	isSettable := true
+	if elemType.Kind() == reflect.Interface {
+		// Interface types might not be settable in some cases, but we'll assume they are
+		// since we're dealing with concrete pointers
+		isSettable = true
+	}
+	
+	return &OutputValidationInfo{
+		IsValidPointer: true,
+		IsSettable:     isSettable,
+		ElementKind:    elemType.Kind(),
+		Error:          nil,
+	}
+}
+
 // ClearCache clears all cached data (useful for testing)
 func (tc *TypeCache) ClearCache() {
 	tc.typeToEBEType = &sync.Map{}
 	tc.structFields = &sync.Map{}
 	tc.elementTypes = &sync.Map{}
+	tc.outputValidation = &sync.Map{}
 }
