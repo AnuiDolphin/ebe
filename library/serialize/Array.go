@@ -15,7 +15,7 @@ func serializeArray(rv reflect.Value, w io.Writer) error {
 
 	// Determine the element type from the array's declared type
 	elemType := rv.Type().Elem()
-	elementType, err := getTypeForReflectType(elemType)
+	elementType, err := typeCache.GetEBEType(elemType)
 	if err != nil {
 		return fmt.Errorf("unsupported array element type: %w", err)
 	}
@@ -507,29 +507,9 @@ func deserializeArrayGeneric(r io.Reader, header byte, out interface{}) error {
 	return nil
 }
 
-// Helper function to determine the Types enum value for a reflect.Type
+// Helper function to determine the Types enum value for a reflect.Type using cache
 func getTypeForReflectType(t reflect.Type) (types.Types, error) {
-	switch t.Kind() {
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
-		return types.UInt, nil
-	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
-		return types.SInt, nil
-	case reflect.Float32, reflect.Float64:
-		return types.Float, nil
-	case reflect.Bool:
-		return types.Boolean, nil
-	case reflect.String:
-		return types.String, nil
-	case reflect.Slice:
-		if t.Elem().Kind() == reflect.Uint8 {
-			return types.Buffer, nil
-		}
-		return 0, fmt.Errorf("nested slices not yet supported")
-	case reflect.Struct:
-		return types.Struct, nil
-	default:
-		return 0, fmt.Errorf("unsupported type: %v", t)
-	}
+	return typeCache.GetEBEType(t)
 }
 
 // readArrayHeader reads and parses the array header, returning length and element type

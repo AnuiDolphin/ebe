@@ -247,9 +247,9 @@ func TestArrayWithSpecialValues(t *testing.T) {
 // TestArraySerializationErrors tests error conditions during serialization
 func TestArraySerializationErrors(t *testing.T) {
 	t.Run("unsupported element type", func(t *testing.T) {
-		// Create a slice with unsupported element type (map)
-		unsupportedSlice := []map[string]int{
-			{"key": 1},
+		// Create a slice with unsupported element type (channel)
+		unsupportedSlice := []chan int{
+			make(chan int),
 		}
 
 		var buf bytes.Buffer

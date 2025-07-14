@@ -19,18 +19,23 @@ func serializeStruct(value interface{}, w io.Writer) error {
 		return fmt.Errorf("expected struct, got %v", rv.Kind())
 	}
 
-	// Count exported fields
-	fieldCount := 0
-	for i := 0; i < rv.NumField(); i++ {
-		field := rv.Type().Field(i)
-		if field.PkgPath == "" { // exported field
-			fieldCount++
-		}
+	// Use cached struct information for performance
+	structInfo, err := typeCache.GetStructInfo(rv.Type())
+	if err != nil {
+		return fmt.Errorf("failed to get struct info: %w", err)
 	}
 
 	// Special case: empty structs serialize to 0 bytes (no header)
-	if fieldCount == 0 {
+	if structInfo.Empty {
 		return nil
+	}
+
+	// Count exported fields using cached information
+	fieldCount := 0
+	for _, fieldInfo := range structInfo.Fields {
+		if fieldInfo.Exported {
+			fieldCount++
+		}
 	}
 
 	// Write struct header with field count optimization
@@ -38,16 +43,18 @@ func serializeStruct(value interface{}, w io.Writer) error {
 		return err
 	}
 
-	// Serialize each exported field in order
-	for i := 0; i < rv.NumField(); i++ {
-		field := rv.Type().Field(i)
-		if field.PkgPath != "" { // unexported field
+	// Serialize each exported field in order using cached field information
+	for _, fieldInfo := range structInfo.Fields {
+		if !fieldInfo.Exported {
 			continue
 		}
 
+		// Get the field value
+		fieldValue := rv.Field(fieldInfo.Index)
+
 		// Recursively call Serialize to serialize the field value
-		if err := Serialize(rv.Field(i).Interface(), w); err != nil {
-			return fmt.Errorf("error serializing field %s: %w", field.Name, err)
+		if err := Serialize(fieldValue.Interface(), w); err != nil {
+			return fmt.Errorf("error serializing field %s: %w", fieldInfo.Name, err)
 		}
 	}
 
@@ -56,19 +63,22 @@ func serializeStruct(value interface{}, w io.Writer) error {
 
 // deserializeStruct deserializes data from a stream into a struct with a pre-read struct header
 func deserializeStruct(r io.Reader, header byte, structValue reflect.Value) error {
-	structType := structValue.Type()
-
 	// Read and parse struct header
 	expectedFieldCount, err := readStructHeader(r, header)
 	if err != nil {
 		return err
 	}
 
-	// Count actual exported fields in the struct
+	// Use cached struct information for performance
+	structInfo, err := typeCache.GetStructInfo(structValue.Type())
+	if err != nil {
+		return fmt.Errorf("failed to get struct info: %w", err)
+	}
+
+	// Count actual exported fields using cached information
 	actualFieldCount := 0
-	for i := 0; i < structValue.NumField(); i++ {
-		field := structValue.Field(i)
-		if field.CanSet() { // exported field
+	for _, fieldInfo := range structInfo.Fields {
+		if fieldInfo.Exported {
 			actualFieldCount++
 		}
 	}
@@ -78,15 +88,14 @@ func deserializeStruct(r io.Reader, header byte, structValue reflect.Value) erro
 		return fmt.Errorf("struct field count mismatch: expected %d, struct has %d exported fields", expectedFieldCount, actualFieldCount)
 	}
 
-	// Deserialize each exported field in order
-	for i := 0; i < structValue.NumField(); i++ {
-		field := structValue.Field(i)
-		fieldType := structType.Field(i)
-
-		// Skip unexported fields
-		if !field.CanSet() {
+	// Deserialize each exported field in order using cached field information
+	for _, fieldInfo := range structInfo.Fields {
+		if !fieldInfo.Exported {
 			continue
 		}
+
+		// Get the field value
+		field := structValue.Field(fieldInfo.Index)
 
 		// Create a pointer to the field for deserialization
 		fieldPtr := field.Addr().Interface()
@@ -94,7 +103,7 @@ func deserializeStruct(r io.Reader, header byte, structValue reflect.Value) erro
 		// Each field reads its own header
 		err = Deserialize(r, fieldPtr)
 		if err != nil {
-			return fmt.Errorf("failed to deserialize field '%s': %w", fieldType.Name, err)
+			return fmt.Errorf("failed to deserialize field '%s': %w", fieldInfo.Name, err)
 		}
 	}
 

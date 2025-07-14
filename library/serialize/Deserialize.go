@@ -96,14 +96,20 @@ func isStructEmpty(outValue reflect.Value) bool {
 		return false
 	}
 
-	// Check if all fields are unexported (private)
-	for i := 0; i < outValue.NumField(); i++ {
-		field := outValue.Type().Field(i)
-		if field.PkgPath == "" { // Exported field
-			return false
+	// Use cached struct information for performance
+	structInfo, err := typeCache.GetStructInfo(outValue.Type())
+	if err != nil {
+		// Fallback to direct reflection on error
+		for i := 0; i < outValue.NumField(); i++ {
+			field := outValue.Type().Field(i)
+			if field.PkgPath == "" { // Exported field
+				return false
+			}
 		}
+		return true
 	}
-	return true
+	
+	return structInfo.Empty
 }
 
 // deserializeSimpleType deserializes data from a stream into a simple (non-struct) type
